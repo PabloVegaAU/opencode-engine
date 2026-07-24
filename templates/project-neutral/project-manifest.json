@@ -1,0 +1,17 @@
+{
+  "$schema": "../../contracts/project-manifest.schema.json",
+  "version": "1",
+  "project_id": "example-project",
+  "repositories": [
+    {
+      "repository_id": "root",
+      "path": ".",
+      "allowed_read_roots": ["."],
+      "allowed_write_roots": []
+    }
+  ],
+  "policy": {
+    "max_writers_per_repository": 1,
+    "max_read_only_child_tasks_per_session": 2
+  }
+}

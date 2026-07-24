@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:opencode-global:contracts:security-policy:v1",
+  "title": "Security Policy Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "allowPush": { "type": "boolean" },
+    "allowForceOperations": { "type": "boolean" },
+    "allowSecretsRead": { "type": "boolean" },
+    "maxWritersPerRepository": { "type": "integer", "minimum": 1, "maximum": 2 },
+    "maxReadOnlyChildTasksPerSession": { "type": "integer", "minimum": 0, "maximum": 3 }
+  }
+}

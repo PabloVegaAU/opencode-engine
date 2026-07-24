@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:opencode-global:routing:model-matrix:v1",
+  "type": "object",
+  "required": ["profiles"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "minLength": 1
+    },
+    "profiles": {
+      "type": "object",
+      "required": ["go", "chatgpt-plus", "mix", "minimax-plus"],
+      "additionalProperties": false,
+      "properties": {
+        "go": { "$ref": "#/$defs/profile" },
+        "chatgpt-plus": { "$ref": "#/$defs/profile" },
+        "mix": { "$ref": "#/$defs/profile" },
+        "minimax-plus": { "$ref": "#/$defs/profile" }
+      }
+    }
+  },
+  "$defs": {
+    "assignment": {
+      "type": "object",
+      "required": ["model"],
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^/]+/.+$"
+        },
+        "variant": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "profile": {
+      "type": "object",
+      "required": ["model", "small_model", "roles", "categories"],
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^/]+/.+$"
+        },
+        "small_model": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^/]+/.+$"
+        },
+        "roles": {
+          "type": "object",
+          "required": [
+            "orchestrator",
+            "explorer",
+            "qa",
+            "researcher",
+            "planner",
+            "dev",
+            "infra",
+            "architect_pro",
+            "review_pro"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "orchestrator": { "$ref": "#/$defs/assignment" },
+            "explorer": { "$ref": "#/$defs/assignment" },
+            "qa": { "$ref": "#/$defs/assignment" },
+            "researcher": { "$ref": "#/$defs/assignment" },
+            "planner": { "$ref": "#/$defs/assignment" },
+            "dev": { "$ref": "#/$defs/assignment" },
+            "infra": { "$ref": "#/$defs/assignment" },
+            "architect_pro": { "$ref": "#/$defs/assignment" },
+            "review_pro": { "$ref": "#/$defs/assignment" }
+          }
+        },
+        "categories": {
+          "type": "object",
+          "required": ["hybrid-content"],
+          "additionalProperties": false,
+          "properties": {
+            "hybrid-content": { "$ref": "#/$defs/assignment" }
+          }
+        }
+      }
+    }
+  }
+}

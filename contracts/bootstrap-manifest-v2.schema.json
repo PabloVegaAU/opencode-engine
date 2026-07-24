@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:opencode-global:contracts:bootstrap-manifest:v2",
+  "title": "Bootstrap Manifest v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "bootstrap_version", "project_id", "created_at", "updated_at", "initializer", "options", "artifacts"],
+  "properties": {
+    "schema_version": { "const": "2.0.0" },
+    "bootstrap_version": { "$ref": "#/$defs/semver" },
+    "project_id": { "$ref": "#/$defs/portableId" },
+    "created_at": { "$ref": "#/$defs/utcTimestamp" },
+    "updated_at": { "$ref": "#/$defs/utcTimestamp" },
+    "initializer": { "$ref": "#/$defs/portablePath" },
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["include_intelligence", "include_contracts", "include_profile_commands", "include_bootstrap_manifest", "force"],
+      "properties": {
+        "include_intelligence": { "type": "boolean" },
+        "include_contracts": { "type": "boolean" },
+        "include_profile_commands": { "type": "boolean" },
+        "include_bootstrap_manifest": { "type": "boolean" },
+        "force": { "type": "boolean" }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "maxItems": 256,
+      "items": { "$ref": "#/$defs/artifact" }
+    }
+  },
+  "$defs": {
+    "portableId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$"
+    },
+    "portablePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^(?:\\.|(?!/)(?!~)(?![A-Za-z]:)(?!.*\\\\)(?!.*//)(?!.*(?:^|/)(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9._-]+(?:[ A-Za-z0-9._-]*[A-Za-z0-9._-])?(?:/[A-Za-z0-9._-]+(?:[ A-Za-z0-9._-]*[A-Za-z0-9._-])?)*)$"
+    },
+    "semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?(?:\\+([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?$"
+    },
+    "utcTimestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "sha256OrNull": {
+      "oneOf": [
+        { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        { "type": "null" }
+      ]
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "artifact_type", "ownership", "source_kind", "source_ref", "baseline_checksum_sha256", "observed_checksum_sha256", "observed_state", "last_migration_id"],
+      "properties": {
+        "path": { "$ref": "#/$defs/portablePath" },
+        "artifact_type": { "enum": ["config", "command", "contract", "intelligence", "manifest", "documentation", "routing", "profile", "other"] },
+        "ownership": { "enum": ["global-managed", "project-owned", "global-managed-local-override", "generated-runtime", "external"] },
+        "source_kind": { "enum": ["global-release", "migration", "generated", "project", "external"] },
+        "source_ref": { "type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[^\\u0000\\r\\n]+$" },
+        "baseline_checksum_sha256": { "$ref": "#/$defs/sha256OrNull" },
+        "observed_checksum_sha256": { "$ref": "#/$defs/sha256OrNull" },
+        "observed_state": { "enum": ["expected", "present", "missing", "diverged", "local_override", "blocked", "skipped", "unmanaged"] },
+        "last_migration_id": {
+          "oneOf": [
+            { "type": "string", "pattern": "^mig_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+            { "type": "null" }
+          ]
+        }
+      }
+    }
+  }
+}

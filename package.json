@@ -1,0 +1,23 @@
+{
+  "name": "opencode-global",
+  "version": "0.3.1",
+  "description": "Neutral, portable OpenCode configuration for multiple computers and projects",
+  "type": "module",
+  "scripts": {
+    "test:unit": "node --test tests/*.test.mjs",
+    "test:integration": "node --test tests/integration/*.test.mjs",
+    "test:all": "pnpm test:unit && pnpm test:integration",
+    "test": "pnpm test:all",
+    "validate": "node scripts/validate.mjs",
+    "doctor": "pwsh scripts/doctor-opencode-global.ps1",
+    "certify": "pwsh scripts/certify-opencode-global.ps1"
+  },
+  "devDependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "jsonc-parser": "^3.3.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

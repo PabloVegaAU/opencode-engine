@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:opencode-global:contracts:profile:v1",
+  "title": "OpenCode Profile Contract",
+  "type": "object",
+  "required": ["$schema", "model", "small_model"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string", "format": "uri" },
+    "model": { "type": "string", "pattern": "^[^/]+/.+$" },
+    "small_model": { "type": "string", "pattern": "^[^/]+/.+$" }
+  }
+}

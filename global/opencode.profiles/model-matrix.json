@@ -1,0 +1,77 @@
+{
+  "$schema": "./model-matrix.schema.json",
+  "profiles": {
+    "go": {
+      "model": "opencode-go/qwen3.7-plus",
+      "small_model": "opencode-go/deepseek-v4-flash",
+      "roles": {
+        "orchestrator": { "model": "opencode-go/qwen3.7-plus" },
+        "explorer": { "model": "opencode-go/deepseek-v4-flash", "variant": "low" },
+        "qa": { "model": "opencode-go/deepseek-v4-flash", "variant": "low" },
+        "researcher": { "model": "opencode-go/minimax-m3" },
+        "planner": { "model": "opencode-go/glm-5.2", "variant": "high" },
+        "dev": { "model": "opencode-go/kimi-k2.7-code" },
+        "infra": { "model": "opencode-go/deepseek-v4-pro", "variant": "medium" },
+        "architect_pro": { "model": "opencode-go/glm-5.2", "variant": "high" },
+        "review_pro": { "model": "opencode-go/qwen3.7-max" }
+      },
+      "categories": {
+        "hybrid-content": { "model": "opencode-go/qwen3.7-plus" }
+      }
+    },
+    "chatgpt-plus": {
+      "model": "openai/gpt-5.6-terra",
+      "small_model": "openai/gpt-5.4-mini",
+      "roles": {
+        "orchestrator": { "model": "openai/gpt-5.6-terra", "variant": "medium" },
+        "explorer": { "model": "openai/gpt-5.4-mini", "variant": "low" },
+        "qa": { "model": "openai/gpt-5.4-mini", "variant": "low" },
+        "researcher": { "model": "openai/gpt-5.6-terra", "variant": "medium" },
+        "planner": { "model": "openai/gpt-5.6-terra", "variant": "medium" },
+        "dev": { "model": "openai/gpt-5.6-terra", "variant": "medium" },
+        "infra": { "model": "openai/gpt-5.6-terra", "variant": "medium" },
+        "architect_pro": { "model": "openai/gpt-5.6-sol", "variant": "high" },
+        "review_pro": { "model": "openai/gpt-5.6-sol", "variant": "high" }
+      },
+      "categories": {
+        "hybrid-content": { "model": "openai/gpt-5.6-terra", "variant": "medium" }
+      }
+    },
+    "mix": {
+      "model": "opencode-go/qwen3.7-plus",
+      "small_model": "opencode-go/deepseek-v4-flash",
+      "roles": {
+        "orchestrator": { "model": "opencode-go/qwen3.7-plus" },
+        "explorer": { "model": "opencode-go/deepseek-v4-flash", "variant": "low" },
+        "qa": { "model": "opencode-go/deepseek-v4-flash", "variant": "low" },
+        "researcher": { "model": "openai/gpt-5.6-terra", "variant": "medium" },
+        "planner": { "model": "opencode-go/glm-5.2", "variant": "high" },
+        "dev": { "model": "opencode-go/kimi-k2.7-code" },
+        "infra": { "model": "opencode-go/deepseek-v4-pro", "variant": "medium" },
+        "architect_pro": { "model": "openai/gpt-5.6-sol", "variant": "high" },
+        "review_pro": { "model": "openai/gpt-5.6-sol", "variant": "high" }
+      },
+      "categories": {
+        "hybrid-content": { "model": "openai/gpt-5.6-terra", "variant": "medium" }
+      }
+    },
+    "minimax-plus": {
+      "model": "minimax/MiniMax-M2.7",
+      "small_model": "minimax/MiniMax-M2.7",
+      "roles": {
+        "orchestrator": { "model": "minimax/MiniMax-M2.7" },
+        "explorer": { "model": "minimax/MiniMax-M2.7" },
+        "qa": { "model": "minimax/MiniMax-M2.7" },
+        "researcher": { "model": "minimax/MiniMax-M2.7" },
+        "planner": { "model": "minimax/MiniMax-M2.7" },
+        "dev": { "model": "minimax/MiniMax-M2.7" },
+        "infra": { "model": "minimax/MiniMax-M2.7" },
+        "architect_pro": { "model": "minimax/MiniMax-M2.7" },
+        "review_pro": { "model": "minimax/MiniMax-M2.7" }
+      },
+      "categories": {
+        "hybrid-content": { "model": "minimax/MiniMax-M2.7" }
+      }
+    }
+  }
+}

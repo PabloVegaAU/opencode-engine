@@ -1,0 +1,578 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:opencode-global:contracts:lifecycle-records:v1",
+  "title": "Environment Lifecycle Contracts v1",
+  "oneOf": [
+    { "$ref": "#/$defs/global_release" },
+    { "$ref": "#/$defs/environment_manifest" },
+    { "$ref": "#/$defs/managed_artifact" },
+    { "$ref": "#/$defs/migration_definition" },
+    { "$ref": "#/$defs/migration_receipt" },
+    { "$ref": "#/$defs/compatibility_result" },
+    { "$ref": "#/$defs/update_plan" },
+    { "$ref": "#/$defs/update_run" },
+    { "$ref": "#/$defs/backup_point" },
+    { "$ref": "#/$defs/rollback_run" }
+  ],
+  "$defs": {
+    "portableId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$"
+    },
+    "portablePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^(?:\\.|(?!/)(?!~)(?![A-Za-z]:)(?!.*\\\\)(?!.*//)(?!.*(?:^|/)(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9._-]+(?:[ A-Za-z0-9._-]*[A-Za-z0-9._-])?(?:/[A-Za-z0-9._-]+(?:[ A-Za-z0-9._-]*[A-Za-z0-9._-])?)*(?:\/)?)$"
+    },
+    "operationId": {
+      "type": "string",
+      "pattern": "^op_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "utcTimestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "gitOid": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+    },
+    "semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?(?:\\+([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?$"
+    },
+    "nonEmptyNoNul": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\u0000]+$"
+    },
+    "branchOrNull": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        { "type": "null" }
+      ]
+    },
+    "reasonCodeArray": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/portableId" }
+    },
+    "portablePathArray": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/portablePath" }
+    },
+    "migrationIdArray": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^mig_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      }
+    },
+    "profileArray": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4,
+      "uniqueItems": true,
+      "items": {
+        "enum": ["go", "chatgpt-plus", "mix", "minimax-plus"]
+      }
+    },
+    "basePortable": {
+      "type": "object",
+      "required": ["record_type", "version", "record_scope", "operation_id", "created_at", "updated_at"],
+      "properties": {
+        "record_type": { "type": "string" },
+        "version": { "const": "1" },
+        "record_scope": { "const": "portable" },
+        "operation_id": { "$ref": "#/$defs/operationId" },
+        "created_at": { "$ref": "#/$defs/utcTimestamp" },
+        "updated_at": { "$ref": "#/$defs/utcTimestamp" }
+      }
+    },
+    "baseMachineLocal": {
+      "type": "object",
+      "required": ["record_type", "version", "record_scope", "operation_id", "created_at", "updated_at"],
+      "properties": {
+        "record_type": { "type": "string" },
+        "version": { "const": "1" },
+        "record_scope": { "const": "machine_local" },
+        "operation_id": { "$ref": "#/$defs/operationId" },
+        "created_at": { "$ref": "#/$defs/utcTimestamp" },
+        "updated_at": { "$ref": "#/$defs/utcTimestamp" }
+      }
+    },
+    "repositoryRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository_id", "path"],
+      "properties": {
+        "repository_id": { "$ref": "#/$defs/portableId" },
+        "path": { "$ref": "#/$defs/portablePath" }
+      }
+    },
+    "profileResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile", "status", "reason_codes"],
+      "properties": {
+        "profile": { "enum": ["go", "chatgpt-plus", "mix", "minimax-plus"] },
+        "status": { "enum": ["compatible", "warning", "blocked", "not_checked"] },
+        "reason_codes": { "$ref": "#/$defs/reasonCodeArray" }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "severity", "subject", "message"],
+      "properties": {
+        "code": { "$ref": "#/$defs/portableId" },
+        "severity": { "enum": ["info", "warning", "error", "blocker"] },
+        "subject": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "message": { "type": "string", "minLength": 1, "maxLength": 500 }
+      }
+    },
+    "repositorySnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository_id", "path", "head_commit", "branch", "is_dirty"],
+      "properties": {
+        "repository_id": { "$ref": "#/$defs/portableId" },
+        "path": { "$ref": "#/$defs/portablePath" },
+        "head_commit": { "$ref": "#/$defs/gitOid" },
+        "branch": { "$ref": "#/$defs/branchOrNull" },
+        "is_dirty": { "type": "boolean" }
+      }
+    },
+    "planAction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action_id", "kind", "target_path", "migration_id", "current_checksum_sha256", "expected_checksum_sha256", "requires_approval", "reason_code"],
+      "properties": {
+        "action_id": { "type": "string", "pattern": "^act_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+        "kind": { "enum": ["create", "replace_global_managed", "preserve_project_owned", "mark_local_override", "migrate_manifest", "regenerate_generated", "skip", "block", "manual_review"] },
+        "target_path": {
+          "oneOf": [
+            { "$ref": "#/$defs/portablePath" },
+            { "type": "null" }
+          ]
+        },
+        "migration_id": {
+          "oneOf": [
+            { "type": "string", "pattern": "^mig_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+            { "type": "null" }
+          ]
+        },
+        "current_checksum_sha256": {
+          "oneOf": [
+            { "$ref": "#/$defs/sha256" },
+            { "type": "null" }
+          ]
+        },
+        "expected_checksum_sha256": {
+          "oneOf": [
+            { "$ref": "#/$defs/sha256" },
+            { "type": "null" }
+          ]
+        },
+        "requires_approval": { "type": "boolean" },
+        "reason_code": { "$ref": "#/$defs/portableId" }
+      }
+    },
+    "global_release": {
+      "allOf": [
+        { "$ref": "#/$defs/basePortable" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["record_type", "version", "record_scope", "operation_id", "created_at", "updated_at", "global_release_id", "release_version", "released_at", "minimum_opencode_version", "maximum_opencode_version_exclusive", "capabilities", "supported_profiles", "environment_manifest_schema_version", "bootstrap_manifest_schema_version", "project_manifest_contract_version", "runtime_contract_version", "migration_ids"],
+          "properties": {
+            "record_type": { "const": "global_release" },
+            "version": { "const": "1" },
+            "record_scope": { "const": "portable" },
+            "operation_id": { "$ref": "#/$defs/operationId" },
+            "created_at": { "$ref": "#/$defs/utcTimestamp" },
+            "updated_at": { "$ref": "#/$defs/utcTimestamp" },
+            "global_release_id": { "type": "string", "pattern": "^grl_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+            "release_version": { "$ref": "#/$defs/semver" },
+            "released_at": { "$ref": "#/$defs/utcTimestamp" },
+            "minimum_opencode_version": { "$ref": "#/$defs/semver" },
+            "maximum_opencode_version_exclusive": {
+              "oneOf": [
+                { "$ref": "#/$defs/semver" },
+                { "type": "null" }
+              ]
+            },
+            "capabilities": { "$ref": "#/$defs/reasonCodeArray" },
+            "supported_profiles": { "$ref": "#/$defs/profileArray" },
+            "environment_manifest_schema_version": { "$ref": "#/$defs/semver" },
+            "bootstrap_manifest_schema_version": { "$ref": "#/$defs/semver" },
+            "project_manifest_contract_version": { "$ref": "#/$defs/semver" },
+            "runtime_contract_version": { "$ref": "#/$defs/semver" },
+            "migration_ids": { "$ref": "#/$defs/migrationIdArray" }
+          }
+        }
+      ]
+    },
+    "environment_manifest": {
+      "allOf": [
+        { "$ref": "#/$defs/basePortable" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["record_type", "version", "record_scope", "operation_id", "created_at", "updated_at", "environment_id", "environment_name", "adopted_global_release", "compatible_profiles", "enabled_capabilities", "repositories", "initialized_at", "last_updated_at"],
+          "properties": {
+            "record_type": { "const": "environment_manifest" },
+            "version": { "const": "1" },
+            "record_scope": { "const": "portable" },
+            "operation_id": { "$ref": "#/$defs/operationId" },
+            "created_at": { "$ref": "#/$defs/utcTimestamp" },
+            "updated_at": { "$ref": "#/$defs/utcTimestamp" },
+            "environment_id": { "type": "string", "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+            "environment_name": { "type": "string", "minLength": 1, "maxLength": 200 },
+            "adopted_global_release": { "$ref": "#/$defs/semver" },
+            "compatible_profiles": { "$ref": "#/$defs/profileArray" },
+            "enabled_capabilities": { "$ref": "#/$defs/reasonCodeArray" },
+            "repositories": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 32,
+              "items": { "$ref": "#/$defs/repositoryRef" }
+            },
+            "initialized_at": { "$ref": "#/$defs/utcTimestamp" },
+            "last_updated_at": { "$ref": "#/$defs/utcTimestamp" }
+          }
+        }
+      ]
+    },
+    "managed_artifact": {
+      "allOf": [
+        { "$ref": "#/$defs/basePortable" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["record_type", "version", "record_scope", "operation_id", "created_at", "updated_at", "managed_artifact_id", "environment_id", "path", "artifact_type", "ownership", "source_kind", "source_ref", "baseline_checksum_sha256", "observed_checksum_sha256", "observed_state", "last_migration_id"],
+          "properties": {
+            "record_type": { "const": "managed_artifact" },
+            "version": { "const": "1" },
+            "record_scope": { "const": "portable" },
+            "operation_id": { "$ref": "#/$defs/operationId" },
+            "created_at": { "$ref": "#/$defs/utcTimestamp" },
+            "updated_at": { "$ref": "#/$defs/utcTimestamp" },
+            "managed_artifact_id": { "type": "string", "pattern": "^mar_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+            "environment_id": { "type": "string", "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+            "path": { "$ref": "#/$defs/portablePath" },
+            "artifact_type": { "enum": ["config", "command", "contract", "intelligence", "manifest", "documentation", "routing", "profile", "other"] },
+            "ownership": { "enum": ["global-managed", "project-owned", "global-managed-local-override", "generated-runtime", "external"] },
+            "source_kind": { "enum": ["global-release", "migration", "generated", "project", "external"] },
+            "source_ref": { "$ref": "#/$defs/portableId" },
+            "baseline_checksum_sha256": {
+              "oneOf": [
+                { "$ref": "#/$defs/sha256" },
+                { "type": "null" }
+              ]
+            },
+            "observed_checksum_sha256": {
+              "oneOf": [
+                { "$ref": "#/$defs/sha256" },
+                { "type": "null" }
+              ]
+            },
+            "observed_state": { "enum": ["expected", "present", "missing", "diverged", "local_override", "blocked", "skipped", "unmanaged"] },
+            "last_migration_id": {
+              "oneOf": [
+                { "type": "string", "pattern": "^mig_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+                { "type": "null" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "migration_definition": {
+      "allOf": [
+        { "$ref": "#/$defs/basePortable" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["record_type", "version", "record_scope", "operation_id", "created_at", "updated_at", "migration_id", "from_release", "to_release", "handler_id", "depends_on_migration_ids", "affected_paths", "reversible", "requires_clean_worktree", "requires_human_approval", "risk_level", "definition_sha256"],
+          "properties": {
+            "record_type": { "const": "migration_definition" },
+            "version": { "const": "1" },
+            "record_scope": { "const": "portable" },
+            "operation_id": { "$ref": "#/$defs/operationId" },
+            "created_at": { "$ref": "#/$defs/utcTimestamp" },
+            "updated_at": { "$ref": "#/$defs/utcTimestamp" },
+            "migration_id": { "type": "string", "pattern": "^mig_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+            "from_release": { "$ref": "#/$defs/semver" },
+            "to_release": { "$ref": "#/$defs/semver" },
+            "handler_id": { "$ref": "#/$defs/portableId" },
+            "depends_on_migration_ids": { "$ref": "#/$defs/migrationIdArray" },
+            "affected_paths": { "$ref": "#/$defs/portablePathArray" },
+            "reversible": { "type": "boolean" },
+            "requires_clean_worktree": { "type": "boolean" },
+            "requires_human_approval": { "type": "boolean" },
+            "risk_level": { "enum": ["low", "medium", "high"] },
+            "definition_sha256": { "$ref": "#/$defs/sha256" }
+          }
+        }
+      ]
+    },
+    "migration_receipt": {
+      "allOf": [
+        { "$ref": "#/$defs/basePortable" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["record_type", "version", "record_scope", "operation_id", "created_at", "updated_at", "migration_receipt_id", "environment_id", "migration_id", "from_release", "to_release", "result", "applied_at", "pre_state_sha256", "post_state_sha256", "rollback_migration_receipt_id"],
+          "properties": {
+            "record_type": { "const": "migration_receipt" },
+            "version": { "const": "1" },
+            "record_scope": { "const": "portable" },
+            "operation_id": { "$ref": "#/$defs/operationId" },
+            "created_at": { "$ref": "#/$defs/utcTimestamp" },
+            "updated_at": { "$ref": "#/$defs/utcTimestamp" },
+            "migration_receipt_id": { "type": "string", "pattern": "^mrc_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+            "environment_id": { "type": "string", "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+            "migration_id": { "type": "string", "pattern": "^mig_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+            "from_release": { "$ref": "#/$defs/semver" },
+            "to_release": { "$ref": "#/$defs/semver" },
+            "result": { "enum": ["applied", "skipped", "failed", "rolled_back"] },
+            "applied_at": { "$ref": "#/$defs/utcTimestamp" },
+            "pre_state_sha256": {
+              "oneOf": [
+                { "$ref": "#/$defs/sha256" },
+                { "type": "null" }
+              ]
+            },
+            "post_state_sha256": {
+              "oneOf": [
+                { "$ref": "#/$defs/sha256" },
+                { "type": "null" }
+              ]
+            },
+            "rollback_migration_receipt_id": {
+              "oneOf": [
+                { "type": "string", "pattern": "^mrc_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+                { "type": "null" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "compatibility_result": {
+      "allOf": [
+        { "$ref": "#/$defs/baseMachineLocal" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["record_type", "version", "record_scope", "operation_id", "created_at", "updated_at", "compatibility_result_id", "environment_id", "target_global_release", "opencode_version", "status", "profile_results", "findings", "checked_at"],
+          "properties": {
+            "record_type": { "const": "compatibility_result" },
+            "version": { "const": "1" },
+            "record_scope": { "const": "machine_local" },
+            "operation_id": { "$ref": "#/$defs/operationId" },
+            "created_at": { "$ref": "#/$defs/utcTimestamp" },
+            "updated_at": { "$ref": "#/$defs/utcTimestamp" },
+            "compatibility_result_id": { "type": "string", "pattern": "^cmp_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+            "environment_id": { "type": "string", "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+            "target_global_release": { "$ref": "#/$defs/semver" },
+            "opencode_version": { "$ref": "#/$defs/semver" },
+            "status": { "enum": ["compatible", "compatible_with_warnings", "blocked", "unknown"] },
+            "profile_results": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 4,
+              "items": { "$ref": "#/$defs/profileResult" }
+            },
+            "findings": {
+              "type": "array",
+              "maxItems": 128,
+              "items": { "$ref": "#/$defs/finding" }
+            },
+            "checked_at": { "$ref": "#/$defs/utcTimestamp" }
+          }
+        }
+      ]
+    },
+    "update_plan": {
+      "allOf": [
+        { "$ref": "#/$defs/baseMachineLocal" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["record_type", "version", "record_scope", "operation_id", "created_at", "updated_at", "update_plan_id", "environment_id", "source_global_release", "target_global_release", "compatibility_result_id", "state", "expires_at", "repository_snapshots", "actions", "requires_human_approval", "blocking_reason_codes"],
+          "properties": {
+            "record_type": { "const": "update_plan" },
+            "version": { "const": "1" },
+            "record_scope": { "const": "machine_local" },
+            "operation_id": { "$ref": "#/$defs/operationId" },
+            "created_at": { "$ref": "#/$defs/utcTimestamp" },
+            "updated_at": { "$ref": "#/$defs/utcTimestamp" },
+            "update_plan_id": { "type": "string", "pattern": "^pln_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+            "environment_id": { "type": "string", "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+            "source_global_release": { "$ref": "#/$defs/semver" },
+            "target_global_release": { "$ref": "#/$defs/semver" },
+            "compatibility_result_id": { "type": "string", "pattern": "^cmp_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+            "state": { "enum": ["draft", "ready", "blocked", "no_update_required", "expired", "applied", "cancelled"] },
+            "expires_at": { "$ref": "#/$defs/utcTimestamp" },
+            "repository_snapshots": {
+              "type": "array",
+              "maxItems": 32,
+              "items": { "$ref": "#/$defs/repositorySnapshot" }
+            },
+            "actions": {
+              "type": "array",
+              "maxItems": 256,
+              "items": { "$ref": "#/$defs/planAction" }
+            },
+            "requires_human_approval": { "type": "boolean" },
+            "blocking_reason_codes": { "$ref": "#/$defs/reasonCodeArray" }
+          }
+        }
+      ]
+    },
+    "update_run": {
+      "allOf": [
+        { "$ref": "#/$defs/baseMachineLocal" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["record_type", "version", "record_scope", "operation_id", "created_at", "updated_at", "update_run_id", "environment_id", "update_plan_id", "state", "started_at", "completed_at", "backup_point_id", "result_commit", "error_code", "fencing_token"],
+          "properties": {
+            "record_type": { "const": "update_run" },
+            "version": { "const": "1" },
+            "record_scope": { "const": "machine_local" },
+            "operation_id": { "$ref": "#/$defs/operationId" },
+            "created_at": { "$ref": "#/$defs/utcTimestamp" },
+            "updated_at": { "$ref": "#/$defs/utcTimestamp" },
+            "update_run_id": { "type": "string", "pattern": "^upd_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+            "environment_id": { "type": "string", "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+            "update_plan_id": { "type": "string", "pattern": "^pln_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+            "state": { "enum": ["pending", "applying", "validating", "succeeded", "failed", "cancelled", "interrupted", "rolled_back"] },
+            "started_at": { "$ref": "#/$defs/utcTimestamp" },
+            "completed_at": {
+              "oneOf": [
+                { "$ref": "#/$defs/utcTimestamp" },
+                { "type": "null" }
+              ]
+            },
+            "backup_point_id": {
+              "oneOf": [
+                { "type": "string", "pattern": "^bkp_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+                { "type": "null" }
+              ]
+            },
+            "result_commit": {
+              "oneOf": [
+                { "$ref": "#/$defs/gitOid" },
+                { "type": "null" }
+              ]
+            },
+            "error_code": {
+              "oneOf": [
+                { "$ref": "#/$defs/portableId" },
+                { "type": "null" }
+              ]
+            },
+            "fencing_token": {
+              "oneOf": [
+                { "type": "integer", "minimum": 1 },
+                { "type": "null" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "backup_point": {
+      "allOf": [
+        { "$ref": "#/$defs/baseMachineLocal" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["record_type", "version", "record_scope", "operation_id", "created_at", "updated_at", "backup_point_id", "environment_id", "update_plan_id", "state", "storage_kind", "storage_ref", "verified_at"],
+          "properties": {
+            "record_type": { "const": "backup_point" },
+            "version": { "const": "1" },
+            "record_scope": { "const": "machine_local" },
+            "operation_id": { "$ref": "#/$defs/operationId" },
+            "created_at": { "$ref": "#/$defs/utcTimestamp" },
+            "updated_at": { "$ref": "#/$defs/utcTimestamp" },
+            "backup_point_id": { "type": "string", "pattern": "^bkp_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+            "environment_id": { "type": "string", "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+            "update_plan_id": { "type": "string", "pattern": "^pln_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+            "state": { "enum": ["creating", "ready", "failed", "consumed", "invalidated"] },
+            "storage_kind": { "enum": ["metadata", "git_ref", "archive", "worktree_snapshot"] },
+            "storage_ref": { "$ref": "#/$defs/nonEmptyNoNul" },
+            "verified_at": {
+              "oneOf": [
+                { "$ref": "#/$defs/utcTimestamp" },
+                { "type": "null" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "rollback_run": {
+      "allOf": [
+        { "$ref": "#/$defs/baseMachineLocal" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["record_type", "version", "record_scope", "operation_id", "created_at", "updated_at", "rollback_run_id", "environment_id", "source_update_run_id", "backup_point_id", "state", "started_at", "completed_at", "result_commit", "error_code"],
+          "properties": {
+            "record_type": { "const": "rollback_run" },
+            "version": { "const": "1" },
+            "record_scope": { "const": "machine_local" },
+            "operation_id": { "$ref": "#/$defs/operationId" },
+            "created_at": { "$ref": "#/$defs/utcTimestamp" },
+            "updated_at": { "$ref": "#/$defs/utcTimestamp" },
+            "rollback_run_id": { "type": "string", "pattern": "^rbk_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+            "environment_id": { "type": "string", "pattern": "^env_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+            "source_update_run_id": { "type": "string", "pattern": "^upd_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+            "backup_point_id": { "type": "string", "pattern": "^bkp_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+            "state": { "enum": ["pending", "rolling_back", "validating", "succeeded", "failed", "cancelled", "interrupted"] },
+            "started_at": { "$ref": "#/$defs/utcTimestamp" },
+            "completed_at": {
+              "oneOf": [
+                { "$ref": "#/$defs/utcTimestamp" },
+                { "type": "null" }
+              ]
+            },
+            "result_commit": {
+              "oneOf": [
+                { "$ref": "#/$defs/gitOid" },
+                { "type": "null" }
+              ]
+            },
+            "error_code": {
+              "oneOf": [
+                { "$ref": "#/$defs/portableId" },
+                { "type": "null" }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

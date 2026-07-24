@@ -1,0 +1,22 @@
+# OpenCode
+sessions/
+logs/
+cache/
+tmp/
+working/
+.backups/
+*.log
+*.pid
+*.lock
+
+# Intelligence
+.intelligence/working/
+.intelligence/cache/
+.intelligence/indexes/
+.opencode/intelligence/indexes/
+.opencode/intelligence/cache/
+
+# Dependencies
+node_modules/
+dist/
+coverage/

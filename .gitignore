@@ -1,0 +1,79 @@
+# Registry and database
+registry.sqlite
+*.sqlite
+*.sqlite3
+
+# Secrets and credentials
+.env
+.env.*
+!.env.example
+.secrets/
+**/.secrets/
+**/auth.json
+**/credentials.json
+**/tokens.json
+*.pem
+*.key
+*.pfx
+**/.netrc
+
+# Local overrides - user-specific active configuration
+*.local.json
+*.local.jsonc
+opencode.local.json
+opencode.local.jsonc
+local.settings.json
+tui.json
+
+# OpenCode runtime state
+sessions/
+logs/
+cache/
+tmp/
+working/
+backups/
+*.log
+*.pid
+*.lock
+**/.opencode/sessions/
+**/.opencode/logs/
+**/.opencode/cache/
+
+# Intelligence generated state
+**/.intelligence/working/
+**/.intelligence/cache/
+**/.opencode/intelligence/indexes/
+**/.opencode/intelligence/cache/
+
+# Dependencies and outputs
+node_modules/
+dist/
+coverage/
+.nyc_output/
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git (keep .github directory)
+.git/
+*.git
+.gitattributes
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*-bak-*
+*.original
+
+# Build artifacts
+*.o
+*.obj
+*.dll
+*.exe

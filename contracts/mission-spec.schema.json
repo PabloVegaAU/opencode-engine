@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:opencode-global:contracts:mission-spec:v1",
+  "title": "Mission Spec Contract v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "title", "repository_id", "tasks"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "format": "uri"
+    },
+    "version": {
+      "const": "1"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "repository_id": {
+      "$ref": "#/$defs/portableId"
+    },
+    "tasks": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "$ref": "#/$defs/taskSpec"
+      }
+    }
+  },
+  "$defs": {
+    "portableId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$"
+    },
+    "portablePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "^(?:\\.|(?!/)(?!~)(?![A-Za-z]:)(?!.*\\\\)(?!.*//)(?!.*(?:^|/)(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*)$"
+    },
+    "pathArray": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/portablePath"
+      }
+    },
+    "taskKey": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$"
+    },
+    "taskKeyArray": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/taskKey"
+      }
+    },
+    "taskSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "title", "instruction_path", "read_scope", "write_scope", "exclusive_scope", "depends_on"],
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/taskKey"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "instruction_path": {
+          "$ref": "#/$defs/portablePath"
+        },
+        "read_scope": {
+          "$ref": "#/$defs/pathArray"
+        },
+        "write_scope": {
+          "$ref": "#/$defs/pathArray"
+        },
+        "exclusive_scope": {
+          "$ref": "#/$defs/pathArray"
+        },
+        "depends_on": {
+          "$ref": "#/$defs/taskKeyArray"
+        }
+      }
+    }
+  }
+}
