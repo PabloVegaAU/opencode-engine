@@ -152,29 +152,23 @@ function Test-RipgrepAvailable {
     if ($LASTEXITCODE -eq 0) {
       $rgTest.State = [ToolState]::AVAILABLE
       $rgTest.Message = "ripgrep available"
-    } else {
-      try {
-        $executable = "grep"
-        $args = @("--version")
-        $result = & $executable $args 2>&1
-        if ($LASTEXITCODE -eq 0) {
-          $rgTest.State = [ToolState]::AVAILABLE
-          $rgTest.Message = "grep available (ripgrep preferred)"
-        } else {
-          $rgTest.State = [ToolState]::UNAVAILABLE
-          $rgTest.Message = "No grep provider found"
-        }
-      }
-      catch {
-        $rgTest.State = [ToolState]::UNAVAILABLE
-        $rgTest.Message = "No grep provider found"
-      }
+      return $rgTest
     }
   }
   catch {
-    $rgTest.State = [ToolState]::UNAVAILABLE
-    $rgTest.Message = "ripgrep not found: $($_.Exception.Message)"
   }
+  try {
+    $null = & git rev-parse --git-dir 2>&1
+    if ($LASTEXITCODE -eq 0) {
+      $rgTest.State = [ToolState]::AVAILABLE
+      $rgTest.Message = "ripgrep not installed; git grep fallback available"
+      return $rgTest
+    }
+  }
+  catch {
+  }
+  $rgTest.State = [ToolState]::UNAVAILABLE
+  $rgTest.Message = "no exact retrieval provider available (install ripgrep or ensure git is available)"
   return $rgTest
 }
 
@@ -685,11 +679,16 @@ Write-Host "[10] Checking retrieval providers..."
 $rgTest = Test-RipgrepAvailable
 switch ($rgTest.State) {
   ([ToolState]::AVAILABLE) {
-    Write-Host "  [OK] $($rgTest.Message)"
+    if ($rgTest.Message -match "git grep fallback") {
+      Write-Host "  [INFO] $($rgTest.Message)"
+      $infoCount++
+    } else {
+      Write-Host "  [OK] $($rgTest.Message)"
+    }
   }
   ([ToolState]::UNAVAILABLE) {
-    Write-Host "  [WARNING] $($rgTest.Message)"
-    $warnings++
+    Write-Host "  [ISSUE] $($rgTest.Message)"
+    $issues++
   }
   default {
     Write-Host "  [UNKNOWN] $($rgTest.Message)"

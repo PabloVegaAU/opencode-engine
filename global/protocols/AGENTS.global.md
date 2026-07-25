@@ -63,11 +63,28 @@
 
 OpenCode Global v0.4.0 provides deterministic retrieval routing via `bin/retrieval/retrieval-router.mjs`. Retrieval is **opt-in per project** — a project without `.ai-env/retrieval-policy.json` is not adopted and the router returns `enabled:false` with reason `PROJECT_NOT_ADOPTED`.
 
+### Do Not Assume Ripgrep Is Installed
+
+Do not assume `ripgrep` is installed.
+
+For exact retrieval:
+1. Use ripgrep when explicitly detected as available.
+2. Otherwise use `git grep` when the repository is managed by Git.
+3. If neither provider is available, report `NO_RETRIEVAL_PROVIDER`.
+
+The absence of ripgrep alone is not an error when `git grep` is available.
+
+Do not:
+- Invent that `rg` always exists
+- Attempt to install ripgrep automatically
+- Use Codebase Memory for simple text search
+- Treat an optional optimization as a requirement
+
 ### When to Call the Router
 
-- **Simple identifiers** (variable names, function names, file paths): do NOT call the router; use ripgrep directly.
+- **Simple identifiers** (variable names, function names, file paths): do NOT call the router; use ripgrep or git grep directly.
 - **Complex queries** (impact analysis, symbol lookup, knowledge questions): call the router for adopted projects.
-- **Non-adopted projects**: treat as read-only, use ripgrep for identifiers only.
+- **Non-adopted projects**: treat as read-only, use ripgrep or git grep for identifiers only.
 
 ### Intent Ladder
 
@@ -75,11 +92,11 @@ Explicit intent: `exact | symbol | architecture | semantic | knowledge | auto`
 
 | Intent | Query Type | Primary Provider | Fallback |
 |--------|-----------|------------------|----------|
-| `exact` | Identifiers, exact text | ripgrep | git-grep |
-| `symbol` | Definitions, references | lsp | codebase-memory → ripgrep |
-| `architecture` | Dependencies, impact | codebase-memory | lsp → ripgrep |
-| `semantic` | Ambiguous concepts | semantic (if enabled) | codebase-memory → ripgrep |
-| `knowledge` | Decisions, ADRs, rules | filesystem (restricted paths) | ripgrep |
+| `exact` | Identifiers, exact text | ripgrep (if available) | git grep |
+| `symbol` | Definitions, references | lsp | codebase-memory → ripgrep → git grep |
+| `architecture` | Dependencies, impact | codebase-memory | lsp → ripgrep → git grep |
+| `semantic` | Ambiguous concepts | semantic (if enabled) | codebase-memory → ripgrep → git grep |
+| `knowledge` | Decisions, ADRs, rules | filesystem (restricted paths) | ripgrep → git grep |
 
 ### Progressive Disclosure
 
@@ -99,14 +116,15 @@ Do NOT use it as a general-purpose memory or for semantic search without explici
 
 ### Provider States
 
-Each provider reports: `installed`, `configured`, `available`, `indexed`, `fresh`
+Each provider reports: `available`, `unknown`, `not_installed`, `not_applicable`
 
 ```
-ripgrep        → available (always)
-lsp            → configured + available (if LSP server present)
-codebase-memory → indexed + fresh (if index matches HEAD)
-semantic       → disabled by default
-filesystem     → always available for knowledge paths
+ripgrep         → available (if rg found in PATH), not_installed (otherwise)
+git_grep        → available (if Git repo), not_applicable (if not a Git repo)
+lsp             → available (if LSP server configured)
+codebase-memory → available (if project adopted and indexed)
+semantic        → disabled by default
+filesystem      → always available (for knowledge paths only)
 ```
 
 ### Knowledge Paths (restricted)

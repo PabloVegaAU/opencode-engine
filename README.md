@@ -12,6 +12,18 @@ OpenCode Global provides:
 - Project initialization templates
 - Contract schemas for validation
 
+## Requirements
+
+| Component | Level | Usage |
+|-----------|-------|-------|
+| Git | Required | Repository, HEAD, state; fallback for `git grep` |
+| Node.js | Required | Retrieval router runtime |
+| PowerShell 7+ | Required | Install, update, init, doctor, certify scripts |
+| OpenCode | Required | Runtime |
+| ripgrep (`rg`) | Optional recommended | Faster exact search |
+| Codebase Memory | Optional | Structural dependency graph |
+| LSP | Optional language-dependent | Symbols and references |
+
 ## Quick Start
 
 ```powershell
@@ -103,11 +115,20 @@ The router resolves schemas and validators via `import.meta.url` (standalone AJV
 
 ### Provider Availability
 
-- `ripgrep` — always available
-- `lsp` — available when LSP server configured
-- `codebase-memory` — indexed when project is adopted
-- `semantic` — disabled by default
-- `filesystem` — always available for knowledge paths only
+| Provider | Status | Description |
+|----------|--------|-------------|
+| `ripgrep` | Optional recommended | Fast exact text search; falls back to `git grep` |
+| `git grep` | Required fallback | Used when ripgrep unavailable in Git repos |
+| `lsp` | Optional | Symbol and reference lookup |
+| `codebase-memory` | Optional | Structural index for dependency analysis |
+| `semantic` | Disabled by default | Semantic search when explicitly enabled |
+| `filesystem` | Always available | Knowledge paths only |
+
+**Retrieval Foundation does not install external tools.**
+
+If ripgrep is available, it is used as the primary exact provider.
+If ripgrep is unavailable and the project is a Git repository, `git grep` is used as the supported fallback.
+If neither ripgrep nor `git grep` is available, exact retrieval reports `NO_RETRIEVAL_PROVIDER`.
 
 ## Security
 
