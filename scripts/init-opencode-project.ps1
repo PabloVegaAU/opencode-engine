@@ -190,13 +190,13 @@ if ($isGitRoot) {
     Copy-GenericFile -Source $agentsSource -RelativePath 'AGENTS.md'
   }
 
-  $bootstrapManifestSource = Join-Path $GlobalRoot "templates\project-neutral\.bootstrap\project-manifest.json"
+  $bootstrapManifestSource = Join-Path $GlobalRoot "templates\project-neutral\project-manifest.json"
   if (Test-Path -LiteralPath $bootstrapManifestSource) {
-    $bootstrapManifestDest = Join-Path $TargetRoot ".bootstrap\project-manifest.json"
+    $bootstrapManifestDest = Join-Path $TargetRoot ".opencode\bootstrap-manifest.json"
     $bootstrapManifestExisted = Test-Path -LiteralPath $bootstrapManifestDest
     $bootstrapManifestChecksum = if (-not $bootstrapManifestExisted) { Get-FileSha256Lower -Path $bootstrapManifestSource } else { $null }
     $managedArtifacts.Add([ordered]@{
-      relative_path = '.bootstrap/project-manifest.json'
+      relative_path = '.opencode/bootstrap-manifest.json'
       artifact_type = 'manifest'
       source = 'global:project-manifest'
       include_checksum = $true
@@ -204,7 +204,7 @@ if ($isGitRoot) {
       expected_checksum = $bootstrapManifestChecksum
       create_state = if ($bootstrapManifestExisted) { 'skipped' } else { 'copied' }
     })
-    Copy-GenericFile -Source $bootstrapManifestSource -RelativePath '.bootstrap\project-manifest.json'
+    Copy-GenericFile -Source $bootstrapManifestSource -RelativePath '.opencode\bootstrap-manifest.json'
   }
 }
 
@@ -337,17 +337,79 @@ if ($IncludeRetrievalPolicy) {
     $retrievalPolicyRelativePath = ".ai-env\retrieval-policy.json"
     $retrievalPolicyDest = Join-Path $TargetRoot $retrievalPolicyRelativePath
     $retrievalPolicyExisted = Test-Path -LiteralPath $retrievalPolicyDest
-    $retrievalPolicyChecksum = if (-not $retrievalPolicyExisted) { Get-FileSha256Lower -Path $retrievalPolicySource } else { $null }
-    $managedArtifacts.Add([ordered]@{
-      relative_path = $retrievalPolicyRelativePath
-      artifact_type = 'config'
-      source = 'global:retrieval-policy'
-      include_checksum = $true
-      existed_before = $retrievalPolicyExisted
-      expected_checksum = $retrievalPolicyChecksum
-      create_state = if ($retrievalPolicyExisted) { 'skipped' } else { 'copied' }
-    })
-    Copy-GenericFile -Source $retrievalPolicySource -RelativePath $retrievalPolicyRelativePath
+    $retrievalPolicyChecksum = Get-FileSha256Lower -Path $retrievalPolicySource
+
+    $bootstrapManifestPath = Join-Path $TargetRoot ".opencode\bootstrap-manifest.json"
+    $alreadyAdopted = $false
+    $retrievalPolicyInLedger = $false
+    $ledgerChecksum = $null
+
+    if (Test-Path -LiteralPath $bootstrapManifestPath) {
+      try {
+        $existingManifest = Get-Content $bootstrapManifestPath -Raw | ConvertFrom-Json
+        foreach ($artifact in $existingManifest.artifacts) {
+          if ($artifact.path -eq '.ai-env/retrieval-policy.json' -and $artifact.artifact_type -eq 'config') {
+            $alreadyAdopted = $true
+            $retrievalPolicyInLedger = $true
+            $ledgerChecksum = $artifact.checksum_sha256
+            break
+          }
+        }
+      } catch {}
+    }
+
+    if ($alreadyAdopted -and $retrievalPolicyInLedger) {
+      if ($ledgerChecksum -eq $retrievalPolicyChecksum) {
+        Write-Host "[skip] Retrieval policy already adopted (checksum match)"
+        $managedArtifacts.Add([ordered]@{
+          relative_path = $retrievalPolicyRelativePath
+          artifact_type = 'config'
+          source = 'global:retrieval-policy'
+          include_checksum = $true
+          existed_before = $true
+          expected_checksum = $retrievalPolicyChecksum
+          create_state = 'already_adopted'
+        })
+      } else {
+        Write-Host "[warn] Retrieval policy already adopted but checksum differs from template"
+        Write-Host "       Existing ledger checksum: $ledgerChecksum"
+        Write-Host "       Template checksum: $retrievalPolicyChecksum"
+        Write-Host "       Not overwriting existing policy. Use -Force to override."
+        $managedArtifacts.Add([ordered]@{
+          relative_path = $retrievalPolicyRelativePath
+          artifact_type = 'config'
+          source = 'global:retrieval-policy'
+          include_checksum = $true
+          existed_before = $true
+          expected_checksum = $retrievalPolicyChecksum
+          create_state = 'divergent'
+        })
+      }
+    } elseif ($retrievalPolicyExisted -and -not $alreadyAdopted) {
+      Write-Host "[warn] Retrieval policy file exists but not in ledger - adding to ledger"
+      $managedArtifacts.Add([ordered]@{
+        relative_path = $retrievalPolicyRelativePath
+        artifact_type = 'config'
+        source = 'global:retrieval-policy'
+        include_checksum = $true
+        existed_before = $true
+        expected_checksum = $retrievalPolicyChecksum
+        create_state = 'adopting_existing'
+      })
+      Copy-GenericFile -Source $retrievalPolicySource -RelativePath $retrievalPolicyRelativePath
+    } else {
+      Write-Host "[info] Adopting retrieval policy for the first time"
+      $managedArtifacts.Add([ordered]@{
+        relative_path = $retrievalPolicyRelativePath
+        artifact_type = 'config'
+        source = 'global:retrieval-policy'
+        include_checksum = $true
+        existed_before = $retrievalPolicyExisted
+        expected_checksum = $retrievalPolicyChecksum
+        create_state = if ($retrievalPolicyExisted) { 'skipped' } else { 'copied' }
+      })
+      Copy-GenericFile -Source $retrievalPolicySource -RelativePath $retrievalPolicyRelativePath
+    }
   }
 }
 

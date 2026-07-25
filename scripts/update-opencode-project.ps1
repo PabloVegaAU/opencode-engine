@@ -113,9 +113,22 @@ function Invoke-DoctorMode {
   Write-Host "Project: $ProjectRoot"
   Write-Host ''
   Write-Host '[1] Checking bootstrap manifest...'
-  $bootstrapPath = Join-Path $ProjectRoot '.bootstrap\project-manifest.json'
-  if (Test-Path $bootstrapPath) {
-    Write-Host '  [OK] .bootstrap/project-manifest.json exists'
+
+  $bootstrapPathCanonical = Join-Path $ProjectRoot '.opencode\bootstrap-manifest.json'
+  $bootstrapPathLegacy = Join-Path $ProjectRoot '.bootstrap\project-manifest.json'
+  $bootstrapPath = $null
+  $bootstrapLocation = $null
+
+  if (Test-Path $bootstrapPathCanonical) {
+    $bootstrapPath = $bootstrapPathCanonical
+    $bootstrapLocation = '.opencode/bootstrap-manifest.json'
+  } elseif (Test-Path $bootstrapPathLegacy) {
+    $bootstrapPath = $bootstrapPathLegacy
+    $bootstrapLocation = '.bootstrap/project-manifest.json (legacy)'
+  }
+
+  if ($bootstrapPath) {
+    Write-Host "  [OK] Found at: $bootstrapLocation"
     try {
       $manifest = Get-Content $bootstrapPath -Raw | ConvertFrom-Json
       Write-Host "  Project ID: $($manifest.project_id)"
@@ -219,12 +232,20 @@ function Invoke-DoctorMode {
 function Invoke-PlanMode {
   param([string]$ProjectRoot)
 
-  $bootstrapPath = Join-Path $ProjectRoot '.bootstrap\project-manifest.json'
-  $hasBootstrap = Test-Path $bootstrapPath
+  $bootstrapPathCanonical = Join-Path $ProjectRoot '.opencode\bootstrap-manifest.json'
+  $bootstrapPathLegacy = Join-Path $ProjectRoot '.bootstrap\project-manifest.json'
+  $bootstrapPath = $null
+
+  if (Test-Path $bootstrapPathCanonical) {
+    $bootstrapPath = $bootstrapPathCanonical
+  } elseif (Test-Path $bootstrapPathLegacy) {
+    $bootstrapPath = $bootstrapPathLegacy
+  }
+
   $manifest = $null
   $artifactsLedger = @()
 
-  if ($hasBootstrap) {
+  if ($bootstrapPath) {
     try {
       $manifest = Get-Content $bootstrapPath -Raw | ConvertFrom-Json
       $artifactsLedger = $manifest.artifacts

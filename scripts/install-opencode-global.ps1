@@ -42,8 +42,7 @@ $filesToInstall = @(
 
 $retrievalFiles = @(
   @{ Source = "global\retrieval\default-policy.json"; Dest = "retrieval\default-policy.json" },
-  @{ Source = "contracts\retrieval-index-state.schema.json"; Dest = "contracts\retrieval-index-state.schema.json" },
-  @{ Source = "templates\project-neutral\.ai-env\retrieval-policy.json"; Dest = "templates\project-neutral\.ai-env\retrieval-policy.json" }
+  @{ Source = "contracts\retrieval-index-state.schema.json"; Dest = "contracts\retrieval-index-state.schema.json" }
 )
 
 $contracts = @(
@@ -166,6 +165,28 @@ if (Test-Path -LiteralPath $contractsSourceDir) {
       } else {
         Install-GlobalFile -SourcePath $sourcePath -RelativeDest "contracts\$contract" -Force $Force
       }
+    }
+  }
+}
+
+$templateSourceDir = Join-Path $RepoRoot "templates\project-neutral"
+if (Test-Path -LiteralPath $templateSourceDir) {
+  $templateDestDir = Join-Path $OpenCodeConfigDir "templates\project-neutral"
+  if (-not (Test-Path -LiteralPath $templateDestDir)) {
+    if ($PSCmdlet.ShouldProcess($templateDestDir, "create template directory")) {
+      New-Item -ItemType Directory -Path $templateDestDir -Force | Out-Null
+      Write-Host "[create] templates/project-neutral/"
+    }
+  }
+  foreach ($file in Get-ChildItem -LiteralPath $templateSourceDir -Recurse -File) {
+    $relativePath = $file.FullName.Substring($templateSourceDir.Length).TrimStart('\', '/')
+    $relativePath = $relativePath -replace '\\', '/'
+    $sourcePath = $file.FullName
+    $destRelativePath = "templates/project-neutral/$relativePath"
+    if ($DryRun) {
+      Write-Host "  [would install] $destRelativePath"
+    } else {
+      Install-GlobalFile -SourcePath $sourcePath -RelativeDest $destRelativePath -Force $Force
     }
   }
 }
