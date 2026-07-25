@@ -340,7 +340,7 @@ if ($IncludeRetrievalPolicy) {
     $retrievalPolicyChecksum = if (-not $retrievalPolicyExisted) { Get-FileSha256Lower -Path $retrievalPolicySource } else { $null }
     $managedArtifacts.Add([ordered]@{
       relative_path = $retrievalPolicyRelativePath
-      artifact_type = 'retrieval-policy'
+      artifact_type = 'config'
       source = 'global:retrieval-policy'
       include_checksum = $true
       existed_before = $retrievalPolicyExisted

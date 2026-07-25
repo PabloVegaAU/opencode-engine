@@ -1,8 +1,8 @@
 ---
 mode: launch
-profile: chatgpt
+profile: chatgpt-plus
 ---
 
-# OpenCode ChatGPT
+# OpenCode ChatGPT Plus
 
-Launch OpenCode with the ChatGPT profile.
+Launch OpenCode with the ChatGPT Plus profile.

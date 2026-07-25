@@ -163,7 +163,8 @@ $scriptsToUpdate = @(
   "opencode-launcher.ps1",
   "cross-session.ps1",
   "cleanup-runtime.ps1",
-  "retrieval-router.ps1"
+  "retrieval-router.ps1",
+  "setup-retrieval-tools.ps1"
 )
 
 $scriptsDestDir = Join-Path $OpenCodeConfigDir "scripts"

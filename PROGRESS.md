@@ -1,50 +1,95 @@
 # OpenCode Global - Build Progress
 
-## Status: READY_FOR_FIRST_COMMIT
+## Status: READY_FOR_REAL_RUNTIME_DEPLOYMENT
 
 ## Current Location
 
 **Source Repository:** `C:\OpenCode\opencode-global-src`
+**Branch:** `feat/retrieval-foundation-v0.4.0`
+**HEAD:** `35cd6c0a23568d7445382cf448266e50582354b6`
 
 **Note:** This is the canonical source repository. Clone to any location for use.
 
+## Three Commits on Branch
+
+| Commit | Description |
+|--------|-------------|
+| `05d90dd` | feat(retrieval): add deterministic retrieval foundation |
+| `ae6b8ac` | docs(retrieval): clarify ripgrep is optional, git grep is required fallback |
+| `35cd6c0` | feat(retrieval): add setup-retrieval-tools.ps1 and retrieval tier reporting |
+
 ## Completed Actions
+
+### Retrieval Foundation v0.4.0
+
+The Retrieval Foundation is implemented and certified:
+
+- **Router:** `bin/retrieval/retrieval-router.mjs` - deterministic retrieval plan builder
+- **Validators:** `bin/retrieval/retrieval-policy-validator.mjs`, `bin/retrieval/retrieval-index-state-validator.mjs`
+- **Default Policy:** `global/retrieval/default-policy.json`
+- **Setup Tools:** `scripts/setup-retrieval-tools.ps1` - cross-platform tool installer (WinGet, Homebrew, Apt, Yum, Dnf, Zypper)
+- **Retrieval Policy Schema:** `contracts/retrieval-policy.schema.json`
+- **Retrieval Index State Schema:** `contracts/retrieval-index-state.schema.json`
 
 ### Canonical Structure Established
 
-The source repository has been reorganized to the canonical structure:
+The source repository follows the canonical structure:
 
 - Scripts at root `scripts/` level
-- Tests at root `tests/` level
+- Tests at root `tests/` level (unit + integration)
 - Commands at root `commands/` level
 - Templates at root `templates/` level
-- Legacy `opencode-global/` container removed
+- Contracts at root `contracts/` level
+- Global runtime defaults at `global/` level
+- Bin retrieval tools at `bin/retrieval/` level
 
 ### Commands Canonical
 
-All legacy aliases have been removed. Canonical public commands:
+All legacy aliases removed. Canonical public commands (8 total):
 
 | Command | Purpose |
 |---------|---------|
 | `/init` | Official command for AGENTS.md creation/improvement |
 | `/init-ai-env` | Initialize project AI environment |
 | `/doctor-ai-env` | Diagnose project AI environment health |
-| `/update-ai-env` | Update project to latest global configuration |
+| `/update-ai-env` | Update project to latest global configuration (read-only) |
 | `/go` | Launch with GO profile |
 | `/chatgpt-plus` | Launch with ChatGPT Plus profile |
 | `/mix` | Launch with MIX profile |
 | `/minimax-plus` | Launch with Minimax Plus profile |
-| `/cross-session` | Cross-session orchestration (requires runtime) |
+| `/cross-session` | Cross-session orchestration (requires runtime CLI) |
 
-### Corrections Applied
+### Template Neutral Fixed
 
-1. **README.md** - Canonical structure, all 4 profiles listed
-2. **docs/PROFILES.md** - MINIMAX-PLUS profile entry added
-3. **AGENTS.md** - Commands synchronized, cross-session clarified
-4. **package.json** - ajv-formats added, test scripts configured
-5. **scripts/validate.mjs** - JSONC parser fixed for URLs with //
-6. **scripts/certify-opencode-global.ps1** - Gates 7-9 added (validate, test:unit, test:integration)
-7. **.gitignore** - Comprehensive exclusions configured
+- `chatgpt-plus.md` now declares `profile: chatgpt-plus` (was `profile: chatgpt`)
+- `minimax-plus.md` now uses declarative `mode: launch` (was Windows-specific path)
+- `go.md` and `mix.md` use portable declarative style
+- Template does not create agents, MCP, skills, Speckit or topology
+
+### Distribution Chain Verified
+
+Source → Runtime Global → Independent Project:
+
+1. **Source:** `C:\OpenCode\opencode-global-src`
+2. **Runtime:** `C:\Users\VegaValverde\.config\opencode` (via install/update scripts)
+3. **Projects:** Independent repositories using init-opencode-project.ps1
+
+### Project Updater State (v0.4.0)
+
+The project updater is **doctor/plan-only** in v0.4.0:
+
+- `update-opencode-project.ps1 -Doctor` - Diagnose project
+- `update-opencode-project.ps1 -Plan` - Generate update plan
+- `apply <plan-id>` - **NOT IMPLEMENTED** (future Project Update Engine)
+- `rollback <run-id>` - **NOT IMPLEMENTED** (future Project Update Engine)
+
+### Orphan Policy Removed
+
+Removed `.ai-env/retrieval-policy.json` from source root. Source is NOT a project and should not adopt itself.
+
+Canonical retrieval policies:
+- `global/retrieval/default-policy.json` - runtime default
+- `templates/project-neutral/.ai-env/retrieval-policy.json` - template for new projects
 
 ## Current Structure
 
@@ -55,14 +100,20 @@ C:\OpenCode\opencode-global-src\
 ├── package.json
 ├── pnpm-lock.yaml
 ├── .gitignore
-├── VERSION
+├── VERSION (0.3.1 - not yet updated for release)
 ├── LICENSE
-├── CHANGELOG.md
+├── CHANGELOG.md (0.3.1 - not yet updated for release)
 ├── PROGRESS.md
 │
 ├── .github/
 │   └── workflows/
 │       └── validate.yml
+│
+├── bin/
+│   └── retrieval/
+│       ├── retrieval-router.mjs
+│       ├── retrieval-policy-validator.mjs
+│       └── retrieval-index-state-validator.mjs
 │
 ├── commands/
 │   ├── chatgpt-plus.md
@@ -75,7 +126,20 @@ C:\OpenCode\opencode-global-src\
 │   └── update-ai-env.md
 │
 ├── contracts/
-│   └── [12 schema files]
+│   ├── bootstrap-manifest.schema.json
+│   ├── bootstrap-manifest-v2.schema.json
+│   ├── graph.schema.json
+│   ├── index.schema.json
+│   ├── lifecycle-records.schema.json
+│   ├── manifest.schema.json
+│   ├── mission-spec.schema.json
+│   ├── profile.schema.json
+│   ├── project-manifest.schema.json
+│   ├── retrieval-index-state.schema.json
+│   ├── retrieval-policy.schema.json
+│   ├── runtime-records.schema.json
+│   ├── security-policy.schema.json
+│   └── session.schema.json
 │
 ├── docs/
 │   ├── ARCHITECTURE.md
@@ -83,6 +147,7 @@ C:\OpenCode\opencode-global-src\
 │   ├── ORCHESTRATION.md
 │   ├── PROFILES.md
 │   ├── RELEASES.md
+│   ├── RETRIEVAL.md
 │   └── SECURITY.md
 │
 ├── global/
@@ -96,16 +161,23 @@ C:\OpenCode\opencode-global-src\
 │   │   └── model-matrix.schema.json
 │   ├── protocols/
 │   │   └── AGENTS.global.md
+│   ├── retrieval/
+│   │   └── default-policy.json
 │   └── README.runtime.md
 │
 ├── scripts/
 │   ├── certify-opencode-global.ps1
+│   ├── cleanup-runtime.ps1
 │   ├── cross-session.ps1
 │   ├── doctor-opencode-global.ps1
+│   ├── generate-retrieval-validators.mjs
 │   ├── init-opencode-project.ps1
 │   ├── install-opencode-global.ps1
 │   ├── opencode-launcher.ps1
+│   ├── retrieval-router.ps1
+│   ├── setup-retrieval-tools.ps1
 │   ├── update-opencode-global.ps1
+│   ├── update-opencode-project.ps1
 │   └── validate.mjs
 │
 ├── templates/
@@ -115,15 +187,23 @@ C:\OpenCode\opencode-global-src\
 │       ├── project-manifest.json
 │       ├── active-task.txt.example
 │       ├── .gitignore
+│       ├── .ai-env/
+│       │   └── retrieval-policy.json
 │       ├── .intelligence/
+│       │   └── README.md
 │       └── .opencode/
 │           └── commands/
+│               ├── chatgpt-plus.md
+│               ├── go.md
+│               ├── minimax-plus.md
+│               └── mix.md
 │
 └── tests/
     ├── config-validation.test.mjs
     ├── init-project.test.mjs
     ├── launcher.test.mjs
     ├── profile-routing.test.mjs
+    ├── retrieval-router.test.mjs
     ├── schema-official.test.mjs
     ├── security-boundaries.test.mjs
     └── integration/
@@ -131,6 +211,8 @@ C:\OpenCode\opencode-global-src\
         ├── install-clean.test.mjs
         ├── install-idempotent.test.mjs
         ├── profiles-commands-contracts.test.mjs
+        ├── retrieval-router.test.mjs
+        ├── retrieval-source-runtime-project.test.mjs
         └── update-preserves-overrides.test.mjs
 ```
 
@@ -138,9 +220,9 @@ C:\OpenCode\opencode-global-src\
 
 | Suite | Tests | Status |
 |-------|-------|--------|
-| Unit tests | 46 | PASS |
-| Integration tests | 14 | PASS |
-| **Total** | **60** | **PASS** |
+| Unit tests | 106 | PASS |
+| Integration tests | 81 | PASS |
+| **Total** | **187** | **PASS** |
 
 ## Certification Gates (ALL PASS)
 
@@ -148,11 +230,11 @@ C:\OpenCode\opencode-global-src\
 |------|--------|
 | pnpm install --frozen-lockfile | PASS |
 | pnpm run validate | PASS |
-| pnpm test:unit (46 tests) | PASS |
-| pnpm test:integration (14 tests) | PASS |
-| pnpm test:all (60 tests) | PASS |
+| pnpm test:unit (106 tests) | PASS |
+| pnpm test:integration (81 tests) | PASS |
+| pnpm test:all (187 tests) | PASS |
 | doctor-opencode-global.ps1 | PASS (0 issues) |
-| certify-opencode-global.ps1 | PASS (15/15) |
+| certify-opencode-global.ps1 | PASS (all checks) |
 
 ## Profile Certification
 
@@ -163,13 +245,34 @@ C:\OpenCode\opencode-global-src\
 | MIX | Hybrid (GO + ChatGPT) | CONFIGURED |
 | MINIMAX-PLUS | minimax/MiniMax-M2.7 | CONFIGURED |
 
-## Cross-session Status
+## Retrieval Foundation Status
 
-**OPTIONAL** - Not distributed in source. Requires OpenCode runtime.
+| Component | Location | Status |
+|-----------|----------|--------|
+| Router | `bin/retrieval/retrieval-router.mjs` | IMPLEMENTED |
+| Policy Validator | `bin/retrieval/retrieval-policy-validator.mjs` | IMPLEMENTED |
+| Index Validator | `bin/retrieval/retrieval-index-state-validator.mjs` | IMPLEMENTED |
+| Default Policy | `global/retrieval/default-policy.json` | IMPLEMENTED |
+| Setup Tools | `scripts/setup-retrieval-tools.ps1` | IMPLEMENTED |
+| Template Policy | `templates/project-neutral/.ai-env/retrieval-policy.json` | IMPLEMENTED |
+| Schema | `contracts/retrieval-policy.schema.json` | IMPLEMENTED |
+| Index Schema | `contracts/retrieval-index-state.schema.json` | IMPLEMENTED |
 
-- Wrapper: `scripts/cross-session.ps1` (distributed)
-- Runtime CLI: Not in source, comes from `npm install -g opencode-ai`
-- Does NOT make install/doctor/certify fail: Correct (optional)
+### Retrieval Tiers
+
+| Tier | Condition | Providers |
+|------|-----------|-----------|
+| OPTIMAL | ripgrep available | exact: ripgrep, symbol: lsp, architecture: codebase-memory |
+| FUNCTIONAL | git available (fallback) | exact: git-grep, symbol: lsp, architecture: codebase-memory |
+| INCOMPLETE | No exact provider | Limited retrieval |
+
+## Gates Pending
+
+| Gate | Status |
+|------|--------|
+| Gate 1: Source final audit | COMPLETE |
+| Gate 2: Runtime global real updated and certified | PENDING |
+| Gate 3: Independent project pilot (Quipusoft) | PENDING |
 
 ## Dependencies
 
@@ -182,32 +285,8 @@ C:\OpenCode\opencode-global-src\
 
 ## Version
 
-- OpenCode Global: **0.3.1**
+- OpenCode Global: **0.3.1** (not yet formally released as 0.4.0)
 - Compatible with OpenCode: **1.18.x+**
-
-## Files Modified This Session
-
-```
-M  AGENTS.md
-M  README.md
-M  package.json
-M  .gitignore
-M  scripts/validate.mjs
-M  scripts/certify-opencode-global.ps1
-M  scripts/opencode-launcher.ps1
-M  scripts/init-opencode-project.ps1
-M  tests/launcher.test.mjs
-M  tests/init-project.test.mjs
-M  tests/integration/*.test.mjs (5 files)
-A  commands/init-ai-env.md
-A  commands/doctor-ai-env.md
-A  commands/update-ai-env.md
-A  commands/minimax-plus.md
-D  opencode-global/ (container removed)
-D  package-lock.json
-D  commands/orchestrate.md
-D  commands/chatgpt.md
-```
 
 ## Security
 

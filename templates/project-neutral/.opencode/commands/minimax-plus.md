@@ -1,10 +1,8 @@
 ---
-description: Launch OpenCode with MINIMAX-PLUS profile
-agent: build
+mode: launch
+profile: minimax-plus
 ---
 
-Launch OpenCode using the MINIMAX-PLUS profile routing.
+# OpenCode Minimax Plus
 
-```powershell
-& "$env:USERPROFILE\.config\opencode\scripts\opencode-launcher.ps1" -Profile minimax-plus -TargetDir (Get-Location).Path
-```
+Launch OpenCode with the Minimax Plus profile.
