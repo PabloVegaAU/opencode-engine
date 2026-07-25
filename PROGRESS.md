@@ -1,22 +1,25 @@
 # OpenCode Global - Build Progress
 
-## Status: READY_FOR_REAL_RUNTIME_DEPLOYMENT
+## Status: V0.4.0_RELEASE_CANDIDATE_READY
 
 ## Current Location
 
 **Source Repository:** `C:\OpenCode\opencode-global-src`
 **Branch:** `feat/retrieval-foundation-v0.4.0`
-**HEAD:** `35cd6c0a23568d7445382cf448266e50582354b6`
+**HEAD:** `5ad4203` (local commit `chore(release): prepare OpenCode Global 0.4.0`)
 
 **Note:** This is the canonical source repository. Clone to any location for use.
 
-## Three Commits on Branch
+## Seven Commits on Branch (v0.4.0)
 
 | Commit | Description |
 |--------|-------------|
 | `05d90dd` | feat(retrieval): add deterministic retrieval foundation |
 | `ae6b8ac` | docs(retrieval): clarify ripgrep is optional, git grep is required fallback |
 | `35cd6c0` | feat(retrieval): add setup-retrieval-tools.ps1 and retrieval tier reporting |
+| `508afb3` | fix(retrieval): finalize template portability and distribution |
+| `40c6ec8` | fix(update): make project updater strictly read-only (doctor/plan only) |
+| `5ad4203` | fix(retrieval): complete project adoption lifecycle |
 
 ## Completed Actions
 
@@ -100,9 +103,9 @@ C:\OpenCode\opencode-global-src\
 ├── package.json
 ├── pnpm-lock.yaml
 ├── .gitignore
-├── VERSION (0.3.1 - not yet updated for release)
+├── VERSION (0.4.0)
 ├── LICENSE
-├── CHANGELOG.md (0.3.1 - not yet updated for release)
+├── CHANGELOG.md (0.4.0)
 ├── PROGRESS.md
 │
 ├── .github/
@@ -221,8 +224,8 @@ C:\OpenCode\opencode-global-src\
 | Suite | Tests | Status |
 |-------|-------|--------|
 | Unit tests | 106 | PASS |
-| Integration tests | 81 | PASS |
-| **Total** | **187** | **PASS** |
+| Integration tests | 147 | PASS |
+| **Total** | **253** | **PASS** |
 
 ## Certification Gates (ALL PASS)
 
@@ -231,8 +234,8 @@ C:\OpenCode\opencode-global-src\
 | pnpm install --frozen-lockfile | PASS |
 | pnpm run validate | PASS |
 | pnpm test:unit (106 tests) | PASS |
-| pnpm test:integration (81 tests) | PASS |
-| pnpm test:all (187 tests) | PASS |
+| pnpm test:integration (147 tests) | PASS |
+| pnpm test:all (253 tests) | PASS |
 | doctor-opencode-global.ps1 | PASS (0 issues) |
 | certify-opencode-global.ps1 | PASS (all checks) |
 
@@ -266,13 +269,13 @@ C:\OpenCode\opencode-global-src\
 | FUNCTIONAL | git available (fallback) | exact: git-grep, symbol: lsp, architecture: codebase-memory |
 | INCOMPLETE | No exact provider | Limited retrieval |
 
-## Gates Pending
+## Gates (ALL COMPLETE)
 
 | Gate | Status |
 |------|--------|
 | Gate 1: Source final audit | COMPLETE |
-| Gate 2: Runtime global real updated and certified | PENDING |
-| Gate 3: Independent project pilot (Quipusoft) | PENDING |
+| Gate 2: Runtime global real updated and certified | COMPLETE |
+| Gate 3: Independent project pilot (Quipusoft) | COMPLETE |
 
 ## Dependencies
 
@@ -285,7 +288,7 @@ C:\OpenCode\opencode-global-src\
 
 ## Version
 
-- OpenCode Global: **0.3.1** (not yet formally released as 0.4.0)
+- OpenCode Global: **0.4.0** (release candidate)
 - Compatible with OpenCode: **1.18.x+**
 
 ## Security
