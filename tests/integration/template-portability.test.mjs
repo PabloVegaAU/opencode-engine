@@ -268,12 +268,16 @@ describe('Updater Doctor-Plan Only', () => {
       'rollback should be NOT_IMPLEMENTED');
   });
 
-  it('update-opencode-project.ps1 is read-only (no Write-ProjectFile calls that modify)', () => {
+  it('update-opencode-project.ps1 is read-only (no destructive write operations)', () => {
     const updateScript = readFileSync(join(REPO_ROOT, 'scripts', 'update-opencode-project.ps1'), 'utf8');
-    assert.ok(updateScript.includes('Backup-ExistingFile'),
-      'should have backup function');
-    assert.ok(updateScript.includes('$DryRun'),
-      'should support DryRun mode');
+    assert.ok(!updateScript.includes('function Apply-'), 'should NOT have Apply function');
+    assert.ok(!updateScript.includes('function Rollback-'), 'should NOT have Rollback function');
+    assert.ok(!updateScript.includes('Write-ProjectFile') || updateScript.includes('# Write-ProjectFile is NOT USED'),
+      'should NOT use Write-ProjectFile for writes');
+    assert.ok(!updateScript.includes('Copy-GenericFile') || updateScript.includes('# Copy-GenericFile is NOT USED'),
+      'should NOT use Copy-GenericFile for writes');
+    assert.ok(!updateScript.includes('Backup-ExistingFile') || updateScript.includes('# Backup-ExistingFile is NOT USED'),
+      'should NOT use Backup-ExistingFile for writes');
   });
 });
 
