@@ -497,6 +497,7 @@ Write-Host ""
 $issues = 0
 $warnings = 0
 $infoCount = 0
+$retrievalTier = "INCOMPLETE"
 
 Write-Host "[1] Checking required files..."
 foreach ($file in $requiredFiles) {
@@ -682,16 +683,20 @@ switch ($rgTest.State) {
     if ($rgTest.Message -match "git grep fallback") {
       Write-Host "  [INFO] $($rgTest.Message)"
       $infoCount++
+      $retrievalTier = "FUNCTIONAL"
     } else {
       Write-Host "  [OK] $($rgTest.Message)"
+      $retrievalTier = "OPTIMAL"
     }
   }
   ([ToolState]::UNAVAILABLE) {
     Write-Host "  [ISSUE] $($rgTest.Message)"
     $issues++
+    $retrievalTier = "INCOMPLETE"
   }
   default {
     Write-Host "  [UNKNOWN] $($rgTest.Message)"
+    $retrievalTier = "INCOMPLETE"
   }
 }
 
@@ -810,6 +815,8 @@ if (-not [string]::IsNullOrEmpty($ProjectPath)) {
   }
 }
 
+Write-Host ""
+Write-Host "Retrieval tier: $retrievalTier"
 Write-Host ""
 Write-Host "======================"
 Write-Host "Issues: $issues"
