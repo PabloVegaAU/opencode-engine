@@ -26,6 +26,9 @@
 .PARAMETER IncludeBootstrapManifest
   Generate bootstrap manifest
 
+.PARAMETER IncludeRetrievalPolicy
+  Include neutral retrieval policy template in .ai-env/retrieval-policy.json
+
 .PARAMETER Force
   Overwrite existing files
 
@@ -42,6 +45,7 @@ param(
   [switch]$IncludeContracts,
   [switch]$IncludeProfileCommands,
   [switch]$IncludeBootstrapManifest,
+  [switch]$IncludeRetrievalPolicy,
   [switch]$Force
 )
 
@@ -327,6 +331,26 @@ if ($IncludeProfileCommands) {
   }
 }
 
+if ($IncludeRetrievalPolicy) {
+  $retrievalPolicySource = Join-Path $GlobalRoot "templates\project-neutral\.ai-env\retrieval-policy.json"
+  if (Test-Path -LiteralPath $retrievalPolicySource) {
+    $retrievalPolicyRelativePath = ".ai-env\retrieval-policy.json"
+    $retrievalPolicyDest = Join-Path $TargetRoot $retrievalPolicyRelativePath
+    $retrievalPolicyExisted = Test-Path -LiteralPath $retrievalPolicyDest
+    $retrievalPolicyChecksum = if (-not $retrievalPolicyExisted) { Get-FileSha256Lower -Path $retrievalPolicySource } else { $null }
+    $managedArtifacts.Add([ordered]@{
+      relative_path = $retrievalPolicyRelativePath
+      artifact_type = 'retrieval-policy'
+      source = 'global:retrieval-policy'
+      include_checksum = $true
+      existed_before = $retrievalPolicyExisted
+      expected_checksum = $retrievalPolicyChecksum
+      create_state = if ($retrievalPolicyExisted) { 'skipped' } else { 'copied' }
+    })
+    Copy-GenericFile -Source $retrievalPolicySource -RelativePath $retrievalPolicyRelativePath
+  }
+}
+
 if ($IncludeBootstrapManifest) {
   $bootstrapManifestPath = '.opencode\bootstrap-manifest.json'
   $bootstrapManifestDest = Join-Path $TargetRoot $bootstrapManifestPath
@@ -362,6 +386,7 @@ if ($IncludeBootstrapManifest) {
       include_contracts = [bool]$IncludeContracts
       include_profile_commands = [bool]$IncludeProfileCommands
       include_bootstrap_manifest = [bool]$IncludeBootstrapManifest
+      include_retrieval_policy = [bool]$IncludeRetrievalPolicy
       force = [bool]$Force
     }
     ownership = 'project'

@@ -40,12 +40,20 @@ $filesToInstall = @(
   @{ Source = "global\protocols\AGENTS.global.md"; Dest = "AGENTS.md" }
 )
 
+$retrievalFiles = @(
+  @{ Source = "global\retrieval\default-policy.json"; Dest = "retrieval\default-policy.json" },
+  @{ Source = "contracts\retrieval-index-state.schema.json"; Dest = "contracts\retrieval-index-state.schema.json" },
+  @{ Source = "templates\project-neutral\.ai-env\retrieval-policy.json"; Dest = "templates\project-neutral\.ai-env\retrieval-policy.json" }
+)
+
 $contracts = @(
   "bootstrap-manifest.schema.json",
   "manifest.schema.json",
   "session.schema.json",
   "index.schema.json",
-  "graph.schema.json"
+  "graph.schema.json",
+  "retrieval-policy.schema.json",
+  "retrieval-index-state.schema.json"
 )
 
 $scriptsToInstall = @(
@@ -57,7 +65,8 @@ $scriptsToInstall = @(
   "update-opencode-project.ps1",
   "opencode-launcher.ps1",
   "cross-session.ps1",
-  "cleanup-runtime.ps1"
+  "cleanup-runtime.ps1",
+  "retrieval-router.ps1"
 )
 
 $commandsToInstall = @(
@@ -115,6 +124,34 @@ foreach ($file in $filesToInstall) {
     Write-Host "  [would install] $($file.Dest)"
   } else {
     Install-GlobalFile -SourcePath $sourcePath -RelativeDest $file.Dest -Force $Force
+  }
+}
+
+foreach ($file in $retrievalFiles) {
+  $sourcePath = Join-Path $RepoRoot $file.Source
+  if (-not (Test-Path -LiteralPath $sourcePath)) {
+    Write-Warning "Retrieval source not found: $($file.Source)"
+    continue
+  }
+  if ($DryRun) {
+    Write-Host "  [would install] $($file.Dest)"
+  } else {
+    Install-GlobalFile -SourcePath $sourcePath -RelativeDest $file.Dest -Force $Force
+  }
+}
+
+$retrievalBinDir = Join-Path $RepoRoot "bin\retrieval"
+if (Test-Path -LiteralPath $retrievalBinDir) {
+  $retrievalBinDestDir = Join-Path $OpenCodeConfigDir "bin\retrieval"
+  foreach ($file in Get-ChildItem -LiteralPath $retrievalBinDir -File) {
+    if ($DryRun) {
+      Write-Host "  [would install] bin\retrieval\$($file.Name)"
+    } else {
+      if (-not (Test-Path -LiteralPath $retrievalBinDestDir)) {
+        New-Item -ItemType Directory -Path $retrievalBinDestDir -Force | Out-Null
+      }
+      Install-GlobalFile -SourcePath $file.FullName -RelativeDest "bin\retrieval\$($file.Name)" -Force $Force
+    }
   }
 }
 

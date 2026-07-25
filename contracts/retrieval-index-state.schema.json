@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Retrieval Index State Schema",
+  "description": "Neutral index state for OpenCode Global v0.4.0 retrieval",
+  "type": "object",
+  "required": ["schema_version", "indexed_commit"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.0$"
+    },
+    "provider": {
+      "type": "string",
+      "enum": ["codebase-memory"]
+    },
+    "indexed_commit": {
+      "type": ["string", "null"]
+    },
+    "index_generation": {
+      "type": ["string", "null"]
+    },
+    "indexed_at": {
+      "type": ["string", "null"]
+    }
+  }
+}

@@ -58,3 +58,91 @@
 - Model, agent, and variant arrive through runtime arguments only. The Project Manifest and Mission Spec never store them.
 - The CLI never pushes, fetches, merges to `main`, or touches remotes. `mission-run` and `integration-apply` require `--approve-local-integration` to apply local integration.
 - `mission-run` stops at conflict, failed, interrupted, blocked, or recovery_required and runs at most one writer Task at a time.
+
+## Retrieval Policy
+
+OpenCode Global v0.4.0 provides deterministic retrieval routing via `bin/retrieval/retrieval-router.mjs`. Retrieval is **opt-in per project** — a project without `.ai-env/retrieval-policy.json` is not adopted and the router returns `enabled:false` with reason `PROJECT_NOT_ADOPTED`.
+
+### When to Call the Router
+
+- **Simple identifiers** (variable names, function names, file paths): do NOT call the router; use ripgrep directly.
+- **Complex queries** (impact analysis, symbol lookup, knowledge questions): call the router for adopted projects.
+- **Non-adopted projects**: treat as read-only, use ripgrep for identifiers only.
+
+### Intent Ladder
+
+Explicit intent: `exact | symbol | architecture | semantic | knowledge | auto`
+
+| Intent | Query Type | Primary Provider | Fallback |
+|--------|-----------|------------------|----------|
+| `exact` | Identifiers, exact text | ripgrep | git-grep |
+| `symbol` | Definitions, references | lsp | codebase-memory → ripgrep |
+| `architecture` | Dependencies, impact | codebase-memory | lsp → ripgrep |
+| `semantic` | Ambiguous concepts | semantic (if enabled) | codebase-memory → ripgrep |
+| `knowledge` | Decisions, ADRs, rules | filesystem (restricted paths) | ripgrep |
+
+### Progressive Disclosure
+
+1. Return **names, paths, relations** first.
+2. Full content only **on demand**.
+3. Never preload files for simple identifier lookups.
+4. Never query the code graph for plain identifiers.
+
+### Codebase Memory Is Structural, Not Universal Memory
+
+Codebase Memory provides a **structural index** of code elements and their relationships. It is not a universal memory or embedding store. Use it for:
+- Dependency graphs
+- Call chains
+- Impact analysis
+
+Do NOT use it as a general-purpose memory or for semantic search without explicit intent.
+
+### Provider States
+
+Each provider reports: `installed`, `configured`, `available`, `indexed`, `fresh`
+
+```
+ripgrep        → available (always)
+lsp            → configured + available (if LSP server present)
+codebase-memory → indexed + fresh (if index matches HEAD)
+semantic       → disabled by default
+filesystem     → always available for knowledge paths
+```
+
+### Knowledge Paths (restricted)
+
+When intent=`knowledge`, the router plans searches only in:
+- `AGENTS.md`, `.ai-env/**`, `docs/**`, `specs/**`
+- ADR directories, Speckit artifacts
+- `README*`, `CHANGELOG*`, `PROGRESS.md`
+- `MIGRATION_CONTROL*`, `HANDOFF_NEXT_RUN*`
+
+### Index Freshness
+
+```
+FRESH          → index_commit == git HEAD
+STALE_INDEX    → index_commit != git HEAD (known)
+UNKNOWN        → index state cannot be determined
+NOT_INDEXED    → no index present
+NOT_APPLICABLE → no git or not a code project
+```
+
+When `dirty_worktree=true` and strategy=`architecture`, verify results with LSP or ripgrep.
+
+### Budget Hard Caps
+
+```
+max_tool_calls: 3
+max_chars: 24000
+timeout_ms: 5000
+```
+
+### Agent Defaults
+
+```
+orchestrator: router (adopted projects), ripgrep (all)
+explorer: ripgrep, lsp, codebase-memory (if indexed)
+dev: ripgrep, lsp, codebase-memory (if indexed), semantic only if enabled
+qa: ripgrep, lsp
+researcher: ripgrep, filesystem knowledge only
+```

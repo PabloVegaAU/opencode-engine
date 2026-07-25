@@ -57,6 +57,58 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
 
 See [docs/PROFILES.md](docs/PROFILES.md) for details.
 
+## Retrieval Foundation
+
+Retrieval is **disabled by default**. To enable per-project:
+
+```powershell
+pwsh .\scripts\init-opencode-project.ps1 C:\my-project -IncludeRetrievalPolicy
+```
+
+### Plan-Only Router
+
+The retrieval router (`bin/retrieval/retrieval-router.mjs`) is **plan-only** — it does not execute tools or modify files. It returns a deterministic JSON plan specifying:
+- Strategy (exact, symbol, architecture, semantic, knowledge)
+- Provider (ripgrep, lsp, codebase-memory, filesystem)
+- Budget constraints (max_tool_calls, max_chars, timeout_ms)
+- Fallback chain if primary provider unavailable
+
+### Flow: Source → Runtime → Project
+
+```
+Source (C:\OpenCode\opencode-global-src)
+    │
+    ▼ install-opencode-global.ps1
+Runtime (~/.config/opencode)
+    │
+    ▼ init-opencode-project.ps1 -IncludeRetrievalPolicy
+Project (.ai-env/retrieval-policy.json)
+    │
+    ▼ retrieval-router.ps1 -Query "..." -ProjectRoot C:\my-project
+Plan (JSON)
+```
+
+The router resolves schemas and validators via `import.meta.url` (standalone AJV validators in `bin/retrieval/`). No runtime source dependencies, no `node_modules` from source.
+
+### Intent Ladder
+
+| Intent | Use When |
+|--------|----------|
+| `exact` | Variable names, file paths, exact text |
+| `symbol` | Definitions, references, symbol lookup |
+| `architecture` | Dependencies, impact analysis |
+| `semantic` | Ambiguous concepts (requires explicit enable) |
+| `knowledge` | ADRs, decisions, documentation |
+| `auto` | Classified from query text |
+
+### Provider Availability
+
+- `ripgrep` — always available
+- `lsp` — available when LSP server configured
+- `codebase-memory` — indexed when project is adopted
+- `semantic` — disabled by default
+- `filesystem` — always available for knowledge paths only
+
 ## Security
 
 Never commit credentials, tokens, or secrets. See [docs/SECURITY.md](docs/SECURITY.md).

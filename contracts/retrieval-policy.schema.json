@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Retrieval Policy Schema",
+  "description": "Neutral per-project retrieval policy for OpenCode Global v0.4.0",
+  "type": "object",
+  "required": ["schema_version", "enabled", "strategies", "budgets"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.0$",
+      "description": "Must be 1"
+    },
+    "enabled": {
+      "type": "boolean",
+      "description": "Whether retrieval is enabled for this project"
+    },
+    "strategies": {
+      "type": "object",
+      "required": ["exact", "symbol", "architecture", "semantic", "knowledge"],
+      "additionalProperties": false,
+      "properties": {
+        "exact": {
+          "type": "object",
+          "required": ["enabled"],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "provider": {
+              "type": "string",
+              "enum": ["ripgrep", "git_grep"],
+              "description": "Provider for exact identifier/text search"
+            }
+          }
+        },
+        "symbol": {
+          "type": "object",
+          "required": ["enabled"],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "provider": {
+              "type": ["string", "null"],
+              "enum": ["lsp", "codebase-memory", "ripgrep", "git_grep", null],
+              "description": "Provider for symbol/definition lookup"
+            }
+          }
+        },
+        "architecture": {
+          "type": "object",
+          "required": ["enabled"],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "provider": {
+              "type": ["string", "null"],
+              "enum": ["codebase-memory", "lsp", "ripgrep", "git_grep", null],
+              "description": "Provider for dependency/impact analysis"
+            }
+          }
+        },
+        "semantic": {
+          "type": "object",
+          "required": ["enabled"],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "provider": {
+              "type": ["string", "null"],
+              "description": "Provider for semantic search (disabled by default)"
+            }
+          }
+        },
+        "knowledge": {
+          "type": "object",
+          "required": ["enabled"],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "provider": {
+              "type": "string",
+              "enum": ["filesystem"],
+              "description": "Provider for historical decisions and documentation"
+            },
+            "paths": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Paths to search for knowledge artifacts"
+            }
+          }
+        }
+      }
+    },
+    "budgets": {
+      "type": "object",
+      "required": ["exact", "symbol", "architecture", "semantic", "knowledge"],
+      "additionalProperties": false,
+      "properties": {
+        "exact": {
+          "type": "object",
+          "required": ["max_tool_calls", "max_results", "max_chars"],
+          "additionalProperties": false,
+          "properties": {
+            "max_tool_calls": { "type": "integer", "minimum": 1, "maximum": 3 },
+            "max_results": { "type": "integer", "minimum": 1, "maximum": 50 },
+            "max_chars": { "type": "integer", "minimum": 1000, "maximum": 50000 }
+          }
+        },
+        "symbol": {
+          "type": "object",
+          "required": ["max_tool_calls", "max_results", "max_chars"],
+          "additionalProperties": false,
+          "properties": {
+            "max_tool_calls": { "type": "integer", "minimum": 1, "maximum": 3 },
+            "max_results": { "type": "integer", "minimum": 1, "maximum": 50 },
+            "max_chars": { "type": "integer", "minimum": 1000, "maximum": 50000 }
+          }
+        },
+        "architecture": {
+          "type": "object",
+          "required": ["max_tool_calls", "max_results", "max_chars"],
+          "additionalProperties": false,
+          "properties": {
+            "max_tool_calls": { "type": "integer", "minimum": 1, "maximum": 3 },
+            "max_results": { "type": "integer", "minimum": 1, "maximum": 50 },
+            "max_chars": { "type": "integer", "minimum": 1000, "maximum": 50000 }
+          }
+        },
+        "semantic": {
+          "type": "object",
+          "required": ["max_tool_calls", "max_results", "max_chars"],
+          "additionalProperties": false,
+          "properties": {
+            "max_tool_calls": { "type": "integer", "minimum": 1, "maximum": 3 },
+            "max_results": { "type": "integer", "minimum": 1, "maximum": 50 },
+            "max_chars": { "type": "integer", "minimum": 1000, "maximum": 50000 }
+          }
+        },
+        "knowledge": {
+          "type": "object",
+          "required": ["max_tool_calls", "max_results", "max_chars"],
+          "additionalProperties": false,
+          "properties": {
+            "max_tool_calls": { "type": "integer", "minimum": 1, "maximum": 3 },
+            "max_results": { "type": "integer", "minimum": 1, "maximum": 50 },
+            "max_chars": { "type": "integer", "minimum": 1000, "maximum": 50000 }
+          }
+        }
+      }
+    }
+  }
+}
