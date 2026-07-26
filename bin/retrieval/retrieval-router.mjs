@@ -459,7 +459,7 @@ export function buildPlan(query, projectRoot, policy, intent) {
   const plan = {
     schema_version: '1.0',
     enabled: resolved.enabled && !error,
-    intent,
+    intent: resolved.resolved,
     strategy,
     provider: provider || null,
     reason: resolved.reason === 'explicit' ? `intent:${intent}` : resolved.reason,

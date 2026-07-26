@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "fixture_name": "qs/sell",
+  "provenance": "synthetic",
+  "measurement_method": "contract/fixture only — NOT executed by the engine",
+  "source_trace": "v0.5.0 Retrieval Execution planning pass",
+  "repository_fingerprints": {
+    "sell-app": "fixed at fixture init time (commit hash captured per run)",
+    "sell-rules": "fixed at fixture init time (commit hash captured per run)"
+  },
+  "token_estimator": "token-estimator-v1",
+  "captured_at": "2026-07-25T00:00:00Z",
+  "scope": "multi-repo",
+  "repositories_searched": 2,
+  "pilot_run": {
+    "queries": [
+      { "query": "SellController.create", "intent": "exact" },
+      { "query": "SellController.create", "intent": "exact" },
+      { "query": "class SellService", "intent": "symbol" },
+      { "query": "class SellService", "intent": "symbol" },
+      { "query": "why does the qs/sell endpoint require authentication", "intent": "knowledge" },
+      { "query": "why does the qs/sell endpoint require authentication", "intent": "knowledge" }
+    ],
+    "observations": {
+      "provenance": "Provisional placeholder. NOT verified. Reserved for Phase 7 release gates.",
+      "total_adapter_calls": null,
+      "total_chars_emitted": null,
+      "total_tokens_emitted": null,
+      "equivalent_repeats": null,
+      "raw_provider_outputs": null
+    }
+  },
+  "v050_release_gates": {
+    "status": "RESERVED",
+    "note": "Percentages are reserved for Phase 7 when verifiable capture exists. The current contract/fixture test does NOT measure these.",
+    "total_adapter_calls_max": null,
+    "equivalent_repeats_max": null,
+    "call_reduction_min_pct": null,
+    "char_reduction_min_pct": null,
+    "token_reduction_min_pct": null
+  }
+}

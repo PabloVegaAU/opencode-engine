@@ -1,0 +1,98 @@
+{
+  "$schema": "https://opencode.ai/contracts/orchestration/project-manifest.schema.json",
+  "version": "1",
+  "project_id": "opencode-retrieval-real-pilot",
+  "repositories": [
+    {
+      "repository_id": "repo.backend.quipusoftapp-backend",
+      "path": "repositories/repo.backend.quipusoftapp-backend",
+      "allowed_read_roots": [
+        "repositories/repo.backend.quipusoftapp-backend",
+        "."
+      ],
+      "allowed_write_roots": [],
+      "protected_paths": [
+        ".git",
+        ".env",
+        ".env.local",
+        "src/main/resources/application.properties",
+        "target"
+      ]
+    },
+    {
+      "repository_id": "repo.backend.zhonghui-backend",
+      "path": "repositories/repo.backend.zhonghui-backend",
+      "allowed_read_roots": [
+        "repositories/repo.backend.zhonghui-backend",
+        "."
+      ],
+      "allowed_write_roots": [],
+      "protected_paths": [
+        ".git",
+        ".env",
+        ".env.local",
+        "src/main/resources/application.properties",
+        "target"
+      ]
+    },
+    {
+      "repository_id": "repo.frontend.quipusoftapp-frontend",
+      "path": "repositories/repo.frontend.quipusoftapp-frontend",
+      "allowed_read_roots": [
+        "repositories/repo.frontend.quipusoftapp-frontend",
+        "."
+      ],
+      "allowed_write_roots": [],
+      "protected_paths": [
+        ".git",
+        ".env",
+        ".env.local",
+        ".env.production",
+        "node_modules",
+        ".next",
+        "dist",
+        "build"
+      ]
+    },
+    {
+      "repository_id": "repo.tests.quipusoftapp-e2e",
+      "path": "repositories/repo.tests.quipusoftapp-e2e",
+      "allowed_read_roots": [
+        "repositories/repo.tests.quipusoftapp-e2e",
+        "."
+      ],
+      "allowed_write_roots": [],
+      "protected_paths": [
+        ".git",
+        ".env",
+        ".env.local",
+        "node_modules",
+        "playwright-report",
+        "test-results",
+        "auth/user.json"
+      ]
+    },
+    {
+      "repository_id": "root",
+      "path": "repositories/root",
+      "allowed_read_roots": [
+        "repositories/root",
+        ".",
+        "repositories/root/.ai-env",
+        "repositories/root/.bootstrap",
+        "repositories/root/.opencode",
+        "repositories/root/.agents",
+        "repositories/root/specs",
+        "repositories/root/contracts",
+        "repositories/root/docs"
+      ],
+      "allowed_write_roots": [],
+      "protected_paths": [
+        ".git",
+        "backend",
+        "frontend",
+        "backend-python"
+      ]
+    }
+  ]
+}

@@ -838,4 +838,355 @@ else {
   Write-Host "Run .\update-opencode-global.ps1 to update managed files."
 }
 
+# ============================================================
+# v0.5.0 Retrieval Execution Doctor (Hardened)
+# ============================================================
+
+Write-Host ""
+Write-Host "======================"
+Write-Host "Retrieval Execution v0.5.0 Diagnostics"
+Write-Host "======================"
+
+# --- Check 1: OPENCODE_RETRIEVAL_MODE is not supported ---
+if ($env:OPENCODE_RETRIEVAL_MODE) {
+  Write-Host "  [REJECTED] OPENCODE_RETRIEVAL_MODE is defined but not supported"
+  $warnings++
+}
+
+# --- Runtime resolution precedence ---
+Write-Host ""
+Write-Host "[R] Resolving runtime directory..."
+$runtimeResolved = $false
+$runtimeSource = ""
+if ($env:OPENCODE_CONFIG_DIR) {
+  $candidate = $env:OPENCODE_CONFIG_DIR
+  if (Test-Path -LiteralPath $candidate) {
+    $resolved = Resolve-Path -LiteralPath $candidate -ErrorAction SilentlyContinue
+    if ($resolved) {
+      $OpenCodeConfigDir = $resolved.Path
+      $runtimeResolved = $true
+      $runtimeSource = "OPENCODE_CONFIG_DIR"
+    }
+  }
+}
+if (-not $runtimeResolved -and $env:XDG_CONFIG_HOME) {
+  $candidate = Join-Path $env:XDG_CONFIG_HOME "opencode"
+  if (Test-Path -LiteralPath $candidate) {
+    $resolved = Resolve-Path -LiteralPath $candidate -ErrorAction SilentlyContinue
+    if ($resolved) {
+      $OpenCodeConfigDir = $resolved.Path
+      $runtimeResolved = $true
+      $runtimeSource = "XDG_CONFIG_HOME/opencode"
+    }
+  }
+}
+if (-not $runtimeResolved) {
+  $candidate = Join-Path $HOME ".config" "opencode"
+  if (Test-Path -LiteralPath $candidate) {
+    $resolved = Resolve-Path -LiteralPath $candidate -ErrorAction SilentlyContinue
+    if ($resolved) {
+      $OpenCodeConfigDir = $resolved.Path
+      $runtimeResolved = $true
+      $runtimeSource = "~/.config/opencode"
+    }
+  }
+}
+Write-Host "  Runtime: $OpenCodeConfigDir (source: $runtimeSource)"
+
+# --- Check 2: v0.5.0 Required Modules with node --check ---
+Write-Host ""
+Write-Host "[12] Checking v0.5.0 retrieval modules (node --check)..."
+$v050Modules = @(
+  "bin\retrieval\retrieval-entry.mjs",
+  "bin\retrieval\execution-engine.mjs",
+  "bin\retrieval\execute-batch.mjs"
+)
+$modulesOk = $true
+foreach ($mod in $v050Modules) {
+  $path = Join-Path $RepoRoot $mod
+  if (Test-Path -LiteralPath $path) {
+    $checkResult = & node --check $path 2>&1
+    if ($LASTEXITCODE -eq 0) {
+      Write-Host "  [OK] $mod (syntax valid)"
+    } else {
+      Write-Host "  [SYNTAX_ERROR] $mod - $checkResult"
+      $issues++
+      $modulesOk = $false
+    }
+  } else {
+    Write-Host "  [MISSING] $mod"
+    $issues++
+    $modulesOk = $false
+  }
+}
+
+# --- Check 3: Adapters with node --check ---
+Write-Host ""
+Write-Host "[13] Checking retrieval adapters (node --check)..."
+$adapters = @(
+  "bin\retrieval\adapters\ripgrep.mjs",
+  "bin\retrieval\adapters\git-grep.mjs",
+  "bin\retrieval\adapters\filesystem.mjs"
+)
+$adaptersOk = $true
+foreach ($adapter in $adapters) {
+  $path = Join-Path $RepoRoot $adapter
+  if (Test-Path -LiteralPath $path) {
+    $checkResult = & node --check $path 2>&1
+    if ($LASTEXITCODE -eq 0) {
+      Write-Host "  [OK] $adapter (syntax valid)"
+    } else {
+      Write-Host "  [SYNTAX_ERROR] $adapter - $checkResult"
+      $issues++
+      $adaptersOk = $false
+    }
+  } else {
+    Write-Host "  [MISSING] $adapter"
+    $issues++
+    $adaptersOk = $false
+  }
+}
+
+# --- Check 4: Wrapper security ---
+Write-Host ""
+Write-Host "[14] Checking retrieval wrapper..."
+$wrapperPath = Join-Path $RepoRoot "scripts\retrieval-router.ps1"
+if (Test-Path -LiteralPath $wrapperPath) {
+  Write-Host "  [OK] scripts\retrieval-router.ps1 exists"
+  $wrapperContent = Get-Content -LiteralPath $wrapperPath -Raw -Encoding UTF8
+  $wrapperIssues = @()
+  if ($wrapperContent -match 'Invoke-Expression') {
+    $wrapperIssues += "Invoke-Expression"
+  }
+  if ($wrapperContent -match 'cmd /c') {
+    $wrapperIssues += "cmd /c"
+  }
+  if ($wrapperContent -match 'powershell -Command') {
+    $wrapperIssues += "powershell -Command"
+  }
+  if ($wrapperContent -match 'UseShellExecute = \$true') {
+    $wrapperIssues += "UseShellExecute = true"
+  }
+  if ($wrapperContent -match '\$args\s*\+') {
+    $wrapperIssues += "argument concatenation"
+  }
+  if ($wrapperContent -match '\$\w+\s*\+\s*\$') {
+    $wrapperIssues += "variable concatenation for commands"
+  }
+  if ($wrapperIssues.Count -gt 0) {
+    Write-Host "  [UNSAFE] Wrapper contains: $($wrapperIssues -join ', ')"
+    $issues++
+  } else {
+    Write-Host "  [OK] Wrapper uses secure argument handling"
+  }
+} else {
+  Write-Host "  [MISSING] scripts\retrieval-router.ps1"
+  $issues++
+}
+
+# --- Check 5: Execution Contracts with JSON parsing ---
+Write-Host ""
+Write-Host "[15] Checking execution contracts (JSON parse)..."
+$executionContracts = @(
+  "contracts\retrieval-execution-plan.schema.json",
+  "contracts\retrieval-execution-result.schema.json",
+  "contracts\retrieval-execution-trace.schema.json",
+  "contracts\retrieval-execution-metrics.schema.json",
+  "contracts\retrieval-execution-reason-codes.schema.json",
+  "contracts\retrieval-plan-base.schema.json",
+  "contracts\repository-state.schema.json"
+)
+$contractsOk = $true
+foreach ($contract in $executionContracts) {
+  $path = Join-Path $RepoRoot $contract
+  if (Test-Path -LiteralPath $path) {
+    try {
+      $content = Get-Content -LiteralPath $path -Raw -Encoding UTF8
+      $null = [System.Text.Json.JsonDocument]::Parse($content, [System.Text.Json.JsonDocumentOptions]::new())
+      Write-Host "  [OK] $contract"
+    } catch {
+      Write-Host "  [INVALID_JSON] $contract - $($_.Exception.Message)"
+      $issues++
+      $contractsOk = $false
+    }
+  } else {
+    Write-Host "  [MISSING] $contract"
+    $issues++
+    $contractsOk = $false
+  }
+}
+
+# --- Check 6: Policy Validator ---
+Write-Host ""
+Write-Host "[16] Checking policy validator..."
+$validatorPath = Join-Path $RepoRoot "bin\retrieval\retrieval-policy-validator.mjs"
+if (Test-Path -LiteralPath $validatorPath) {
+  Write-Host "  [OK] bin\retrieval\retrieval-policy-validator.mjs exists"
+} else {
+  Write-Host "  [MISSING] bin\retrieval\retrieval-policy-validator.mjs"
+  $issues++
+}
+
+# --- Check 7: Validator parity via generate-retrieval-validators.mjs --check ---
+Write-Host ""
+Write-Host "[16b] Checking validator parity..."
+$validatorCheckResult = & node (Join-Path $RepoRoot "scripts\generate-retrieval-validators.mjs") --check 2>&1
+$validatorParityOk = $LASTEXITCODE -eq 0
+if ($validatorParityOk) {
+  Write-Host "  [OK] Validators match canonical SHA256"
+} else {
+  Write-Host "  [DRIFT] Validator drift detected"
+  Write-Host "  Details: $validatorCheckResult"
+  $issues++
+}
+
+# --- Check 8: Node.js detection (native, no shell) ---
+Write-Host ""
+Write-Host "[17] Detecting tools (native mechanisms)..."
+$nodeCmd = Get-Command node -ErrorAction SilentlyContinue
+if ($nodeCmd) {
+  Write-Host "  [OK] Node.js: $($nodeCmd.Source)"
+} else {
+  Write-Host "  [MISSING] Node.js not found"
+  $issues++
+}
+
+# --- Check 9: PowerShell detection (native) ---
+$pwshCmd = Get-Command pwsh -ErrorAction SilentlyContinue
+if (-not $pwshCmd) {
+  $pwshCmd = Get-Command powershell -ErrorAction SilentlyContinue
+}
+if ($pwshCmd) {
+  Write-Host "  [OK] PowerShell: $($pwshCmd.Source)"
+} else {
+  Write-Host "  [WARNING] PowerShell not found"
+  $warnings++
+}
+
+# --- Check 10: Git detection (native) ---
+$gitCmd = Get-Command git -ErrorAction SilentlyContinue
+if ($gitCmd) {
+  Write-Host "  [OK] Git: $($gitCmd.Source)"
+  $gitAvailable = $true
+} else {
+  Write-Host "  [MISSING] Git not found"
+  $gitAvailable = $false
+  $issues++
+}
+
+# --- Check 11: ripgrep (optional) ---
+$rgCmd = Get-Command rg -ErrorAction SilentlyContinue
+if ($rgCmd) {
+  Write-Host "  [OK] ripgrep: $($rgCmd.Source)"
+  $ripgrepAvailable = $true
+} else {
+  Write-Host "  [OPTIONAL] ripgrep not installed"
+  $ripgrepAvailable = $false
+  $warnings++
+}
+
+# --- Check 12: Runtime retrieval directory (read-only inspection) ---
+Write-Host ""
+Write-Host "[18] Checking runtime retrieval directory..."
+$runtimeDir = Join-Path $OpenCodeConfigDir "retrieval"
+if (Test-Path -LiteralPath $runtimeDir) {
+  Write-Host "  [INFO] Runtime retrieval directory exists: $runtimeDir"
+  try {
+    $resolved = Resolve-Path -LiteralPath $runtimeDir -ErrorAction SilentlyContinue
+    if ($resolved) {
+      Write-Host "  [OK] Path resolves to: $($resolved.Path)"
+    }
+  } catch {
+    Write-Host "  [WARNING] Could not resolve path: $($_.Exception.Message)"
+    $warnings++
+  }
+} else {
+  Write-Host "  [INFO] Runtime retrieval directory not present (will be created at runtime)"
+}
+
+# --- Determine Retrieval Execution Readiness (strengthened) ---
+Write-Host ""
+Write-Host "[19] Retrieval execution readiness..."
+$executionReady = $false
+$readyReasons = @()
+
+if ($nodeCmd) {
+  $readyReasons += "Node.js available"
+} else {
+  $readyReasons += "Node.js MISSING"
+}
+
+if ($contractsOk) {
+  $readyReasons += "all 7 contracts valid"
+} else {
+  $readyReasons += "contracts MISSING or INVALID"
+}
+
+if ($validatorParityOk) {
+  $readyReasons += "validator parity OK"
+} else {
+  $readyReasons += "validator DRIFT"
+}
+
+$entryPath = Join-Path $RepoRoot "bin\retrieval\retrieval-entry.mjs"
+$enginePath = Join-Path $RepoRoot "bin\retrieval\execution-engine.mjs"
+$batchPath = Join-Path $RepoRoot "bin\retrieval\execute-batch.mjs"
+$wrapperExists = Test-Path -LiteralPath $wrapperPath
+$adaptersExist = $adaptersOk
+
+if ((Test-Path -LiteralPath $entryPath) -and (Test-Path -LiteralPath $enginePath) -and (Test-Path -LiteralPath $batchPath)) {
+  $readyReasons += "entry/engine/batch present and valid"
+} else {
+  $readyReasons += "entry/engine/batch MISSING or INVALID"
+}
+
+if ($wrapperExists -and $wrapperIssues.Count -eq 0) {
+  $readyReasons += "wrapper present and secure"
+} else {
+  $readyReasons += "wrapper MISSING or UNSAFE"
+}
+
+if ($adaptersExist) {
+  $readyReasons += "all adapters present"
+} else {
+  $readyReasons += "adapters MISSING"
+}
+
+$hasExactProvider = $false
+if ($ripgrepAvailable) {
+  $hasExactProvider = $true
+  $readyReasons += "ripgrep available"
+} elseif ($gitAvailable) {
+  $hasExactProvider = $true
+  $readyReasons += "git-grep fallback available"
+} else {
+  $readyReasons += "no exact provider available"
+}
+
+if ($nodeCmd -and $contractsOk -and $validatorParityOk -and (Test-Path -LiteralPath $entryPath) -and (Test-Path -LiteralPath $enginePath) -and (Test-Path -LiteralPath $batchPath) -and $wrapperExists -and $wrapperIssues.Count -eq 0 -and $adaptersExist -and $hasExactProvider) {
+  $executionReady = $true
+}
+
+Write-Host "  retrieval_execution_ready: $executionReady"
+Write-Host "  Reasons: $($readyReasons -join '; ')"
+
+# --- Determine Tier for v0.5.0 ---
+$retrievalTier050 = "INCOMPLETE"
+if ($ripgrepAvailable) {
+  $retrievalTier050 = "OPTIMAL"
+  Write-Host "  Tier: OPTIMAL (ripgrep available)"
+} elseif ($gitAvailable) {
+  $retrievalTier050 = "FUNCTIONAL"
+  Write-Host "  Tier: FUNCTIONAL (git-grep fallback)"
+} else {
+  Write-Host "  Tier: INCOMPLETE (no exact provider)"
+}
+
+Write-Host ""
+Write-Host "======================"
+Write-Host "Retrieval Execution v0.5.0 Summary"
+Write-Host "======================"
+Write-Host "tier: $retrievalTier050"
+Write-Host "retrieval_execution_ready: $executionReady"
+
 exit $issues

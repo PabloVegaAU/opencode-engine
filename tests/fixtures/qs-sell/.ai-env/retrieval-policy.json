@@ -1,0 +1,58 @@
+{
+  "schema_version": "1.0",
+  "enabled": true,
+  "strategies": {
+    "exact": {
+      "enabled": true,
+      "provider": "ripgrep"
+    },
+    "symbol": {
+      "enabled": true,
+      "provider": "ripgrep"
+    },
+    "architecture": {
+      "enabled": true,
+      "provider": "codebase-memory"
+    },
+    "semantic": {
+      "enabled": true,
+      "provider": "semantic"
+    },
+    "knowledge": {
+      "enabled": true,
+      "provider": "filesystem"
+    }
+  },
+  "budgets": {
+    "exact": {
+      "max_tool_calls": 1,
+      "max_results": 25,
+      "max_chars": 12000,
+      "timeout_ms": 5000
+    },
+    "symbol": {
+      "max_tool_calls": 2,
+      "max_results": 25,
+      "max_chars": 16000,
+      "timeout_ms": 5000
+    },
+    "architecture": {
+      "max_tool_calls": 2,
+      "max_results": 30,
+      "max_chars": 20000,
+      "timeout_ms": 5000
+    },
+    "semantic": {
+      "max_tool_calls": 2,
+      "max_results": 12,
+      "max_chars": 16000,
+      "timeout_ms": 5000
+    },
+    "knowledge": {
+      "max_tool_calls": 2,
+      "max_results": 12,
+      "max_chars": 16000,
+      "timeout_ms": 5000
+    }
+  }
+}

@@ -909,6 +909,298 @@ try {
     $env:USERPROFILE = $savedUserProfile
   }
 
+  # ============================================================
+  # v0.5.0 Phase 6 Certification Gates
+  # These run inside the main try block before cleanup.
+  # ============================================================
+
+  Write-Host ""
+  Write-Host "=============================="
+  Write-Host "v0.5.0 Phase 6 Certification Gates"
+  Write-Host "=============================="
+
+  # --- Gate 1: Required v0.5.0 files exist, are readable, and SHA-256 is computed ---
+  Write-Host ""
+  Write-Host "[v0.5.0 Gate 1] Required files: existence, readability, SHA-256..."
+  $v050Files = @(
+    "bin/retrieval/retrieval-entry.mjs",
+    "bin/retrieval/execution-engine.mjs",
+    "bin/retrieval/execute-batch.mjs",
+    "bin/retrieval/retrieval-doctor.mjs",
+    "bin/retrieval/retrieval-router.mjs",
+    "bin/retrieval/retrieval-policy-validator.mjs",
+    "bin/retrieval/retrieval-index-state-validator.mjs",
+    "bin/retrieval/adapters/ripgrep.mjs",
+    "bin/retrieval/adapters/git-grep.mjs",
+    "bin/retrieval/adapters/filesystem.mjs",
+    "bin/retrieval/adapters/shared.mjs",
+    "scripts/retrieval-router.ps1",
+    "scripts/doctor-opencode-global.ps1",
+    "scripts/generate-retrieval-validators.mjs",
+    "contracts/retrieval-execution-plan.schema.json",
+    "contracts/retrieval-execution-result.schema.json",
+    "contracts/retrieval-execution-trace.schema.json",
+    "contracts/retrieval-execution-metrics.schema.json",
+    "contracts/retrieval-execution-reason-codes.schema.json",
+    "contracts/retrieval-plan-base.schema.json",
+    "contracts/repository-state.schema.json",
+    "contracts/retrieval-policy.schema.json",
+    "contracts/retrieval-index-state.schema.json"
+  )
+  $v050Hashes = @{}
+  $v050Gate1Ok = $true
+  foreach ($rel in $v050Files) {
+    $abs = Join-Path $RepoRoot $rel
+    if (-not (Test-Path -LiteralPath $abs -PathType Leaf)) {
+      Write-Host "  [MISSING] $rel"
+      $v050Gate1Ok = $false
+      $issues++
+      continue
+    }
+    try {
+      $null = Get-Content -LiteralPath $abs -Raw -Encoding UTF8
+      $hash = Get-FileSha256 -Path $abs
+      if (-not $hash) {
+        Write-Host "  [UNREADABLE] $rel"
+        $v050Gate1Ok = $false
+        $issues++
+        continue
+      }
+      $v050Hashes[$rel] = $hash
+      Write-Host "  [OK] $rel  sha256=$hash"
+    } catch {
+      Write-Host "  [UNREADABLE] $rel - $($_.Exception.Message)"
+      $v050Gate1Ok = $false
+      $issues++
+    }
+  }
+  if (-not $v050Gate1Ok) {
+    Write-Host "  [FAIL] Gate 1: required files missing or unreadable"
+    exit 1
+  }
+  Write-Host "  [OK] Gate 1: all 23 files exist, readable, SHA-256 computed ($(@($v050Hashes.Keys).Count) hashes)"
+
+  # --- Gate 2: Validator parity via generate-retrieval-validators.mjs --check ---
+  Write-Host ""
+  Write-Host "[v0.5.0 Gate 2] Validator parity..."
+  $validatorCheck = & node (Join-Path $RepoRoot "scripts/generate-retrieval-validators.mjs") --check 2>&1
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host "  [FAIL] Validator drift detected"
+    Write-Host "  $validatorCheck"
+    exit 1
+  }
+  if (-not ($validatorCheck -match "VALIDATORS_OK")) {
+    Write-Host "  [FAIL] Validator check did not return VALIDATORS_OK"
+    Write-Host "  $validatorCheck"
+    exit 1
+  }
+  Write-Host "  [OK] Gate 2: validator parity confirmed"
+
+  # --- Gate 3: node --check on every adapter and module ---
+  Write-Host ""
+  Write-Host "[v0.5.0 Gate 3] node --check on all ESM modules and adapters..."
+  $nodeCheckModules = @(
+    "bin/retrieval/retrieval-entry.mjs",
+    "bin/retrieval/execution-engine.mjs",
+    "bin/retrieval/execute-batch.mjs",
+    "bin/retrieval/retrieval-doctor.mjs",
+    "bin/retrieval/retrieval-router.mjs",
+    "bin/retrieval/retrieval-policy-validator.mjs",
+    "bin/retrieval/retrieval-index-state-validator.mjs",
+    "bin/retrieval/budget.mjs",
+    "bin/retrieval/contract-validation.mjs",
+    "bin/retrieval/equivalence.mjs",
+    "bin/retrieval/metrics.mjs",
+    "bin/retrieval/normalize.mjs",
+    "bin/retrieval/path-restrict.mjs",
+    "bin/retrieval/preflight.mjs",
+    "bin/retrieval/reason-codes.mjs",
+    "bin/retrieval/repository-state.mjs",
+    "bin/retrieval/token-estimator-v1.mjs",
+    "bin/retrieval/adapters/ripgrep.mjs",
+    "bin/retrieval/adapters/git-grep.mjs",
+    "bin/retrieval/adapters/filesystem.mjs",
+    "bin/retrieval/adapters/shared.mjs"
+  )
+  $nodeCheckFailures = 0
+  foreach ($rel in $nodeCheckModules) {
+    $abs = Join-Path $RepoRoot $rel
+    if (-not (Test-Path -LiteralPath $abs)) {
+      Write-Host "  [MISSING] $rel"
+      $nodeCheckFailures++
+      continue
+    }
+    $checkOutput = & node --check $abs 2>&1
+    if ($LASTEXITCODE -ne 0) {
+      Write-Host "  [SYNTAX_ERROR] $rel - $checkOutput"
+      $nodeCheckFailures++
+    } else {
+      Write-Host "  [OK] $rel"
+    }
+  }
+  if ($nodeCheckFailures -gt 0) {
+    Write-Host "  [FAIL] Gate 3: $nodeCheckFailures module(s) failed node --check"
+    exit 1
+  }
+  Write-Host "  [OK] Gate 3: all $($nodeCheckModules.Count) modules pass node --check"
+
+  # --- Gate 4: Real ESM import for entry, engine, batch, doctor (isolated Node process) ---
+  Write-Host ""
+  Write-Host "[v0.5.0 Gate 4] Real ESM import for entry/engine/batch/doctor..."
+  $esmScriptPath = Join-Path $RepoRoot "working\v050-esm-import.mjs"
+  if (-not (Test-Path -LiteralPath (Join-Path $RepoRoot "working"))) {
+    $null = New-Item -ItemType Directory -Path (Join-Path $RepoRoot "working") -Force
+  }
+  $esmScript = @'
+import { pathToFileURL } from 'url';
+const targets = [
+  'retrieval-entry.mjs',
+  'execution-engine.mjs',
+  'execute-batch.mjs',
+  'retrieval-doctor.mjs'
+];
+const repoRoot = process.env.OPENCODE_REPO_ROOT;
+let allOk = true;
+for (const t of targets) {
+  const sep = repoRoot.includes('\\') ? '\\' : '/';
+  const fullPath = repoRoot + sep + 'bin' + sep + 'retrieval' + sep + t;
+  const url = pathToFileURL(fullPath).href;
+  try {
+    await import(url);
+    console.log('IMPORT_OK ' + t);
+  } catch (err) {
+    console.error('IMPORT_FAILED ' + t + ': ' + err.message);
+    allOk = false;
+  }
+}
+if (!allOk) {
+  process.exitCode = 1;
+}
+'@
+  Set-Content -LiteralPath $esmScriptPath -Value $esmScript -Encoding UTF8
+  $env:OPENCODE_REPO_ROOT = $RepoRoot
+  $esmResult = & node $esmScriptPath 2>&1
+  $esmExit = $LASTEXITCODE
+  Remove-Item Env:OPENCODE_REPO_ROOT -ErrorAction SilentlyContinue
+  Remove-Item -LiteralPath $esmScriptPath -ErrorAction SilentlyContinue
+  if ($esmExit -ne 0) {
+    Write-Host "  [FAIL] Gate 4: ESM import failed (exit $esmExit)"
+    Write-Host "  $esmResult"
+    exit 1
+  }
+  $importCount = ([regex]::Matches($esmResult, "IMPORT_OK")).Count
+  if ($importCount -lt 4) {
+    Write-Host "  [FAIL] Gate 4: only $importCount/4 modules imported"
+    Write-Host "  $esmResult"
+    exit 1
+  }
+  Write-Host "  [OK] Gate 4: all 4 modules imported via pathToFileURL (real ESM, no CLI, no search)"
+
+  # --- Gate 5: JSON parse for all 9 contracts ---
+  Write-Host ""
+  Write-Host "[v0.5.0 Gate 5] JSON parse for all 9 contracts..."
+  $allContracts = @(
+    "contracts/retrieval-execution-plan.schema.json",
+    "contracts/retrieval-execution-result.schema.json",
+    "contracts/retrieval-execution-trace.schema.json",
+    "contracts/retrieval-execution-metrics.schema.json",
+    "contracts/retrieval-execution-reason-codes.schema.json",
+    "contracts/retrieval-plan-base.schema.json",
+    "contracts/repository-state.schema.json",
+    "contracts/retrieval-policy.schema.json",
+    "contracts/retrieval-index-state.schema.json"
+  )
+  $contractFailures = 0
+  foreach ($rel in $allContracts) {
+    $abs = Join-Path $RepoRoot $rel
+    if (-not (Test-Path -LiteralPath $abs)) {
+      Write-Host "  [MISSING] $rel"
+      $contractFailures++
+      continue
+    }
+    try {
+      $content = Get-Content -LiteralPath $abs -Raw -Encoding UTF8
+      $null = [System.Text.Json.JsonDocument]::Parse($content, [System.Text.Json.JsonDocumentOptions]::new())
+      Write-Host "  [OK] $rel"
+    } catch {
+      Write-Host "  [INVALID_JSON] $rel - $($_.Exception.Message)"
+      $contractFailures++
+    }
+  }
+  if ($contractFailures -gt 0) {
+    Write-Host "  [FAIL] Gate 5: $contractFailures contract(s) failed JSON parse"
+    exit 1
+  }
+  Write-Host "  [OK] Gate 5: all 9 contracts parse as valid JSON"
+
+  # --- Gate 6: Wrapper security re-verification ---
+  Write-Host ""
+  Write-Host "[v0.5.0 Gate 6] Wrapper security (read-only scan)..."
+  $wrapperAbs = Join-Path $RepoRoot "scripts/retrieval-router.ps1"
+  if (-not (Test-Path -LiteralPath $wrapperAbs)) {
+    Write-Host "  [MISSING] scripts/retrieval-router.ps1"
+    exit 1
+  }
+  $wrapperContent = Get-Content -LiteralPath $wrapperAbs -Raw -Encoding UTF8
+  $forbidden = @("Invoke-Expression", "cmd /c", "powershell -Command", "UseShellExecute = `$true")
+  $wrapperInsecure = $false
+  foreach ($pattern in $forbidden) {
+    if ($wrapperContent -match [regex]::Escape($pattern)) {
+      Write-Host "  [UNSAFE] wrapper contains forbidden pattern: $pattern"
+      $wrapperInsecure = $true
+    }
+  }
+  if (-not ($wrapperContent -match "ArgumentList\.Add")) {
+    Write-Host "  [UNSAFE] wrapper does not use ArgumentList.Add"
+    $wrapperInsecure = $true
+  }
+  if ($wrapperInsecure) {
+    exit 1
+  }
+  Write-Host "  [OK] Gate 6: wrapper secure (no Invoke-Expression, no cmd /c, no powershell -Command, uses ArgumentList.Add)"
+
+  # --- Gate 7: Doctor invocation ---
+  Write-Host ""
+  Write-Host "[v0.5.0 Gate 7] Doctor invocation..."
+  $doctorResult = & pwsh -NoProfile -File (Join-Path $RepoRoot "scripts/doctor-opencode-global.ps1") 2>&1
+  $doctorExit = $LASTEXITCODE
+  if (-not ($doctorResult -match "Issues: 0")) {
+    Write-Host "  [FAIL] Doctor reports non-zero issues"
+    Write-Host $doctorResult
+    exit 1
+  }
+  if ($doctorExit -ne 0) {
+    Write-Host "  [FAIL] Doctor exited with code $doctorExit"
+    Write-Host $doctorResult
+    exit 1
+  }
+  Write-Host "  [OK] Gate 7: doctor reports 0 issues and exits 0"
+
+  # --- Gate 8: Hash coverage summary ---
+  Write-Host ""
+  Write-Host "[v0.5.0 Gate 8] Hash coverage summary..."
+  $coveredCount = $v050Hashes.Count
+  Write-Host "  Total v0.5.0 files hashed: $coveredCount"
+  Write-Host "  Categories:"
+  $entryCount = ($v050Hashes.Keys | Where-Object { $_ -like "bin/retrieval/*.mjs" -and $_ -notlike "bin/retrieval/adapters/*" }).Count
+  $adapterCount = ($v050Hashes.Keys | Where-Object { $_ -like "bin/retrieval/adapters/*" }).Count
+  $contractCount = ($v050Hashes.Keys | Where-Object { $_ -like "contracts/*" }).Count
+  $scriptCount = ($v050Hashes.Keys | Where-Object { $_ -like "scripts/*" }).Count
+  Write-Host "    - entry/engine/batch/doctor/router: $entryCount"
+  Write-Host "    - adapters: $adapterCount"
+  Write-Host "    - contracts: $contractCount"
+  Write-Host "    - scripts: $scriptCount"
+  if ($coveredCount -lt 23) {
+    Write-Host "  [FAIL] Gate 8: expected at least 23 hashed files, got $coveredCount"
+    exit 1
+  }
+  Write-Host "  [OK] Gate 8: hash coverage complete"
+
+  Write-Host ""
+  Write-Host "=============================="
+  Write-Host "v0.5.0 PHASE 6 GATES PASSED" -ForegroundColor Green
+  Write-Host "=============================="
+
   Write-Host ""
   Write-Host "=============================="
   Write-Host "CERTIFICATION PASSED" -ForegroundColor Green

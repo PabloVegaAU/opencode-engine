@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:opencode-global:contracts:repository-state:v1",
+  "title": "Repository State Contract (multi-repo, scope_fingerprint)",
+  "description": "Snapshot taken before any v0.5.0 execution. Supports one or more Git repositories declared by the project's project-manifest.json. Per-repository states are ordered (by repository_id ascending) and unique. Each entry has a per-repo fingerprint; the composite scope_fingerprint is sha256 of the joined per-repo fingerprints. The adapter_signature is NOT computed here — it lives in retrieval-execution-plan as sha256(scope_fingerprint + strategy + provider + normalized_query). The path is a repository-relative POSIX path. The equivalence cache is automatically disabled when any repository has dirty_worktree=true (CACHE_DISABLED_DIRTY_WORKTREE).",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "repositories",
+    "scope_fingerprint",
+    "captured_at"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "repositories": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": { "$ref": "#/$defs/repositoryEntry" }
+    },
+    "scope_fingerprint": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "sha256 of the ordered, newline-joined per-repo fingerprints (per_repo_id + ':' + per_repo_fingerprint)."
+    },
+    "captured_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "$defs": {
+    "repositoryEntry": {
+      "type": "object",
+      "required": [
+        "repository_id",
+        "path",
+        "commit",
+        "branch",
+        "detached",
+        "dirty_worktree",
+        "index_status",
+        "fingerprint"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "repository_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$"
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*$",
+          "description": "Repository-relative POSIX path. No leading slash, no backslash, no '..' segment."
+        },
+        "commit": {
+          "type": "string",
+          "description": "git rev-parse HEAD. 'unknown' when not a git repo."
+        },
+        "branch": {
+          "type": "string",
+          "description": "'HEAD' when detached, otherwise branch name."
+        },
+        "detached": {
+          "type": "boolean"
+        },
+        "dirty_worktree": {
+          "type": "boolean"
+        },
+        "index_status": {
+          "type": "string",
+          "enum": ["FRESH", "STALE_INDEX", "NOT_INDEXED", "UNKNOWN", "NOT_APPLICABLE"]
+        },
+        "indexed_commit": {
+          "type": ["string", "null"]
+        },
+        "index_generation": {
+          "type": ["string", "null"]
+        },
+        "indexed_at": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "fingerprint": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "sha256 of commit + branch + dirty_worktree + index_status. Per-repo only. Required for the scope_fingerprint composition."
+        }
+      }
+    }
+  }
+}

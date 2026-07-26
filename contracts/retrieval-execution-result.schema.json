@@ -1,0 +1,258 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:opencode-global:contracts:retrieval-execution-result:v1",
+  "title": "Retrieval Execution Result Contract",
+  "description": "Normalised result emitted by the v0.5.0 execution engine. mode is always 'execute'. plan is the full v0.5.0 plan (strict execution-plan). repository_state is the multi-repo snapshot; its composite signature is scope_fingerprint. logical_adapter_calls is one call per adapter run over the multi-repo scope; it is bounded by call_budget (<=3). provider_process_invocations is the total number of provider processes spawned (one per repo per logical call); it is >= logical_adapter_calls and has no hard cap. fallback_count is the number of logical fallback calls; fallback_count <= logical_adapter_calls. progressive disclosure is stateless and limited to the same batch; focused_read_calls and focused_read_chars count the expansion. result_count = items.length, bounded by result_budget. raw_result_count is preserved separately. reason_codes is a $ref to the frozen catalogue. providers are restricted to ripgrep, git_grep, filesystem. Items carry repository_id, line, column, preview, preview_token, score, source_provider (null where appropriate).",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "mode",
+    "plan",
+    "repository_state",
+    "intent",
+    "strategy",
+    "provider",
+    "logical_adapter_calls",
+    "call_budget",
+    "provider_process_invocations",
+    "fallback_count",
+    "raw_result_count",
+    "result_count",
+    "result_budget",
+    "char_count",
+    "char_budget",
+    "truncated",
+    "cache_hits",
+    "deduped",
+    "cache_evictions",
+    "focused_read_calls",
+    "focused_read_chars",
+    "repositories_searched",
+    "first_relevant_result_ms",
+    "adapter_stdout_chars",
+    "normalized_chars",
+    "emitted_chars",
+    "estimated_tokens_emitted",
+    "token_estimator_version",
+    "items",
+    "reason_codes",
+    "warnings",
+    "duration_ms",
+    "trace_id"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "mode": { "type": "string", "const": "execute" },
+    "plan": { "$ref": "urn:opencode-global:contracts:retrieval-execution-plan:v1" },
+    "repository_state": { "$ref": "urn:opencode-global:contracts:repository-state:v1" },
+    "intent": { "type": "string", "enum": ["exact", "symbol", "architecture", "semantic", "knowledge"] },
+    "strategy": { "type": "string", "enum": ["exact", "symbol", "architecture", "semantic", "knowledge"] },
+    "provider": {
+      "type": ["string", "null"],
+      "enum": ["ripgrep", "git_grep", "filesystem", null],
+      "description": "v0.5.0 executables: ripgrep, git_grep, filesystem. 'knowledge' is a strategy; the provider for it is 'filesystem'."
+    },
+    "logical_adapter_calls": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3,
+      "description": "Number of logical adapter calls over the multi-repo scope. Includes the primary call and any fallback calls. Cache hits and pre-call availability probes do not count. Hard cap: 3."
+    },
+    "call_budget": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3,
+      "description": "max_tool_calls from the executed plan. Invariant: logical_adapter_calls <= call_budget."
+    },
+    "provider_process_invocations": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total provider processes spawned across all repos. One logical call over the multi-repo scope spawns one process per repo. No hard cap. Invariant: provider_process_invocations >= logical_adapter_calls."
+    },
+    "fallback_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of logical fallback calls. Invariant: fallback_count <= logical_adapter_calls."
+    },
+    "raw_result_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 50,
+      "description": "Items emitted by the adapter before dedup and budget. Independent from result_count."
+    },
+    "result_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 50,
+      "description": "items.length. Invariant: result_count <= result_budget."
+    },
+    "result_budget": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 50,
+      "description": "max_results from the executed plan."
+    },
+    "char_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "emitted_chars — characters actually emitted (preview bytes) across items."
+    },
+    "char_budget": {
+      "type": "integer",
+      "minimum": 1000,
+      "maximum": 50000,
+      "description": "max_chars from the executed plan."
+    },
+    "truncated": {
+      "type": "boolean",
+      "description": "true if BUDGET_TRUNCATED or BUDGET_NORMALIZED was emitted."
+    },
+    "cache_hits": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of EQUIVALENT_REUSED events. Cache hits are only possible within the same batch (one process). Independent wrapper invocations do not share the cache."
+    },
+    "deduped": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of EQUIVALENT_DEDUPED items removed by the normalizer."
+    },
+    "cache_evictions": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of CACHE_EVICTED events."
+    },
+    "focused_read_calls": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of focused reads (progressive disclosure expansions). Each focused read revalidates the scope_fingerprint, allowed roots, and deny globs. Always counted, never free."
+    },
+    "focused_read_chars": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Characters emitted across all focused reads."
+    },
+    "repositories_searched": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 32
+    },
+    "first_relevant_result_ms": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Milliseconds from start to first emitted item. null when no items were emitted."
+    },
+    "adapter_stdout_chars": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total stdout characters produced by adapter invocations before normalisation."
+    },
+    "normalized_chars": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Characters after normaliser mapping, before budget truncation."
+    },
+    "emitted_chars": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Characters after budget truncation. Equals char_count."
+    },
+    "estimated_tokens_emitted": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Opaque estimate. Always null when emitted_chars == 0 and focused_read_chars == 0; otherwise > 0."
+    },
+    "token_estimator_version": {
+      "type": "string",
+      "description": "Versioned identifier of the deterministic estimator (e.g. 'token-estimator-v1'). Same version is used for baseline and result."
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "path",
+          "repository_id",
+          "line",
+          "column",
+          "preview",
+          "preview_token",
+          "score",
+          "source_provider"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable identifier: <provider>:<repository_id>:<path>:<line>."
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["exact", "symbol", "architecture", "semantic", "knowledge"]
+          },
+          "path": {
+            "type": "string",
+            "pattern": "^(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*$",
+            "description": "Repository-relative POSIX path."
+          },
+          "repository_id": {
+            "type": "string",
+            "description": "Owning repository from the multi-repo scope."
+          },
+          "line": {
+            "type": ["integer", "null"],
+            "minimum": 1
+          },
+          "column": {
+            "type": ["integer", "null"],
+            "minimum": 1
+          },
+          "preview": {
+            "type": ["string", "null"],
+            "description": "Truncated text. null when PROGRESSIVE_DISCLOSURE_APPLIED."
+          },
+          "preview_token": {
+            "type": ["string", "null"],
+            "description": "Continuation token. Set when PROGRESSIVE_DISCLOSURE_APPLIED. Stateless: valid only within the same batch."
+          },
+          "relations": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional. Used by architecture / symbol kinds."
+          },
+          "score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "source_provider": {
+            "type": "string",
+            "enum": ["ripgrep", "git_grep", "filesystem"]
+          }
+        }
+      }
+    },
+    "reason_codes": {
+      "type": "array",
+      "items": { "$ref": "urn:opencode-global:contracts:retrieval-execution-reason-codes:v1" }
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "error": {
+      "type": ["string", "null"]
+    },
+    "duration_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "trace_id": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F-]{36}$"
+    }
+  }
+}

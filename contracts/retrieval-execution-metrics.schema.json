@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:opencode-global:contracts:retrieval-execution-metrics:v1",
+  "title": "Retrieval Execution Metrics Contract",
+  "description": "Per-session metrics. Emitted only via --Metrics / --WriteMetrics. Path is restricted to allowed subdirectories under the global runtime or to a path validated via Resolve-Path that is not inside the project and not outside the authorized roots. The contract uses logical_adapter_calls (one per adapter execution over the multi-repo scope) and provider_process_invocations (one per repo per logical call). Cache hits are only counted within the same batch. focused_read_calls and focused_read_chars track the cost of progressive disclosure expansions. token_estimator_version is the same version used for baseline and result. summary.total_results == sum(run.result_count). reason_codes is a $ref to the frozen catalogue.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "session_id",
+    "process_started_at",
+    "token_estimator_version",
+    "runs",
+    "summary"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "session_id": { "type": "string", "pattern": "^[0-9a-fA-F-]{36}$" },
+    "process_started_at": { "type": "string", "format": "date-time" },
+    "token_estimator_version": {
+      "type": "string",
+      "description": "Versioned identifier of the deterministic estimator (e.g. 'token-estimator-v1'). Same version is used for baseline and result."
+    },
+    "runs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "trace_id",
+          "intent",
+          "strategy",
+          "provider",
+          "logical_adapter_calls",
+          "call_budget",
+          "provider_process_invocations",
+          "fallback_count",
+          "raw_result_count",
+          "result_count",
+          "result_budget",
+          "char_count",
+          "char_budget",
+          "cache_hits",
+          "deduped",
+          "cache_evictions",
+          "focused_read_calls",
+          "focused_read_chars",
+          "adapter_stdout_chars",
+          "normalized_chars",
+          "emitted_chars",
+          "estimated_tokens_emitted",
+          "repositories_searched",
+          "first_relevant_result_ms",
+          "duration_ms",
+          "reason_codes"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "trace_id": { "type": "string", "pattern": "^[0-9a-fA-F-]{36}$" },
+          "intent": { "type": "string", "enum": ["exact", "symbol", "architecture", "semantic", "knowledge"] },
+          "strategy": { "type": "string", "enum": ["exact", "symbol", "architecture", "semantic", "knowledge"] },
+          "provider": { "type": ["string", "null"], "enum": ["ripgrep", "git_grep", "filesystem", null] },
+          "logical_adapter_calls": { "type": "integer", "minimum": 0, "maximum": 3 },
+          "call_budget": { "type": "integer", "minimum": 1, "maximum": 3 },
+          "provider_process_invocations": { "type": "integer", "minimum": 0 },
+          "fallback_count": { "type": "integer", "minimum": 0 },
+          "raw_result_count": { "type": "integer", "minimum": 0 },
+          "result_count": { "type": "integer", "minimum": 0 },
+          "result_budget": { "type": "integer", "minimum": 1, "maximum": 50 },
+          "char_count": { "type": "integer", "minimum": 0 },
+          "char_budget": { "type": "integer", "minimum": 1000, "maximum": 50000 },
+          "cache_hits": { "type": "integer", "minimum": 0 },
+          "deduped": { "type": "integer", "minimum": 0 },
+          "cache_evictions": { "type": "integer", "minimum": 0 },
+          "focused_read_calls": { "type": "integer", "minimum": 0 },
+          "focused_read_chars": { "type": "integer", "minimum": 0 },
+          "adapter_stdout_chars": { "type": "integer", "minimum": 0 },
+          "normalized_chars": { "type": "integer", "minimum": 0 },
+          "emitted_chars": { "type": "integer", "minimum": 0 },
+          "estimated_tokens_emitted": { "type": ["integer", "null"], "minimum": 0 },
+          "repositories_searched": { "type": "integer", "minimum": 1, "maximum": 32 },
+          "first_relevant_result_ms": { "type": ["integer", "null"], "minimum": 0 },
+          "duration_ms": { "type": "integer", "minimum": 0 },
+          "reason_codes": {
+            "type": "array",
+            "items": { "$ref": "urn:opencode-global:contracts:retrieval-execution-reason-codes:v1" }
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "total_runs",
+        "total_logical_adapter_calls",
+        "total_provider_process_invocations",
+        "total_results",
+        "total_emitted_chars",
+        "total_normalized_chars",
+        "total_estimated_tokens_emitted",
+        "total_cache_hits",
+        "total_deduped",
+        "total_cache_evictions",
+        "total_focused_read_calls",
+        "total_focused_read_chars",
+        "total_repositories_searched",
+        "max_logical_calls_in_run",
+        "mean_logical_calls_per_run",
+        "mean_chars_per_run"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "total_runs": { "type": "integer", "minimum": 0 },
+        "total_logical_adapter_calls": { "type": "integer", "minimum": 0 },
+        "total_provider_process_invocations": { "type": "integer", "minimum": 0 },
+        "total_results": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Sum of run.result_count across runs. Invariant: total_results == sum(run.result_count)."
+        },
+        "total_emitted_chars": { "type": "integer", "minimum": 0 },
+        "total_normalized_chars": { "type": "integer", "minimum": 0 },
+        "total_estimated_tokens_emitted": { "type": ["integer", "null"], "minimum": 0 },
+        "total_cache_hits": { "type": "integer", "minimum": 0 },
+        "total_deduped": { "type": "integer", "minimum": 0 },
+        "total_cache_evictions": { "type": "integer", "minimum": 0 },
+        "total_focused_read_calls": { "type": "integer", "minimum": 0 },
+        "total_focused_read_chars": { "type": "integer", "minimum": 0 },
+        "total_repositories_searched": { "type": "integer", "minimum": 0 },
+        "max_logical_calls_in_run": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "mean_logical_calls_per_run": { "type": "number", "minimum": 0 },
+        "mean_chars_per_run": { "type": "number", "minimum": 0 }
+      }
+    }
+  }
+}

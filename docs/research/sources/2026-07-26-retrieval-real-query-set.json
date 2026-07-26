@@ -1,0 +1,111 @@
+{
+  "schema_version": "1.0",
+  "methodology": "deterministic real-source query discovery via git grep (v3, no file reads)",
+  "discovered_at": "2026-07-26T18:19:14.345Z",
+  "source_project": "<pilot-source-project>",
+  "primary_repository": "repo.backend.quipusoftapp-backend",
+  "query_set_hash": "86ab0582f9f342e5a0f8f115011df3e7dfebc9f6ff2362b323511cfb7fb03cec",
+  "queries": [
+    {
+      "query": "LoginRequest",
+      "intent": "exact"
+    },
+    {
+      "query": "LoginRequest",
+      "intent": "exact"
+    },
+    {
+      "query": "class Constants",
+      "intent": "symbol"
+    },
+    {
+      "query": "class Constants",
+      "intent": "symbol"
+    },
+    {
+      "query": "Agent Orchestrator",
+      "intent": "knowledge"
+    },
+    {
+      "query": "Agent Orchestrator",
+      "intent": "knowledge"
+    }
+  ],
+  "query_descriptions": [
+    {
+      "intent": "exact",
+      "query": "LoginRequest",
+      "match_count": 7,
+      "anchors": [
+        {
+          "path": "src/main/java/com/quipusoft/api/controller/AuthController.java",
+          "line": 14,
+          "text": "import com.quipusoft.api.request.auth.LoginRequest;"
+        },
+        {
+          "path": "src/main/java/com/quipusoft/api/controller/AuthController.java",
+          "line": 28,
+          "text": "public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {"
+        },
+        {
+          "path": "src/main/java/com/quipusoft/api/request/auth/LoginRequest.java",
+          "line": 6,
+          "text": "public class LoginRequest {"
+        }
+      ],
+      "criterion": "known Spring Boot identifier with 2-100 matches"
+    },
+    {
+      "intent": "symbol",
+      "query": "class Constants",
+      "match_count": 68,
+      "anchors": [
+        {
+          "path": "src/main/java/com/quipusoft/api/config/ApplicationConfig.java",
+          "line": 15,
+          "text": "import com.quipusoft.api.utils.Constants;"
+        },
+        {
+          "path": "src/main/java/com/quipusoft/api/config/ApplicationConfig.java",
+          "line": 40,
+          "text": ".orElseThrow(() -> new UsernameNotFoundException(Constants.D_EX_USER_FOUND));"
+        },
+        {
+          "path": "src/main/java/com/quipusoft/api/service/impl/AppServiceImpl.java",
+          "line": 10,
+          "text": "import com.quipusoft.api.utils.Constants;"
+        }
+      ],
+      "criterion": "public class/interface/enum declaration with >=3 references, most matches first"
+    },
+    {
+      "intent": "knowledge",
+      "query": "Agent Orchestrator",
+      "match_count": 11,
+      "anchors": [
+        {
+          "path": "AGENTS.md",
+          "line": 152,
+          "text": "## Agent Orchestrator"
+        },
+        {
+          "path": "README.md",
+          "line": 16,
+          "text": "├── 🤖 Agent Orchestrator            ← Enruta, delega, verifica"
+        },
+        {
+          "path": "docs/architecture/BOOTSTRAP_EXECUTION_PLAN.md",
+          "line": 1,
+          "text": "# Bootstrap Execution Plan — Agent Orchestrator"
+        }
+      ],
+      "criterion": "heading phrase (2-3 words) from governance files, >=2 matches, most matches first"
+    }
+  ],
+  "repository_commits": {
+    "repo.backend.quipusoftapp-backend": "1205f1aa700e97c7965ac5fb056b61c37ca50452",
+    "repo.backend.zhonghui-backend": "bfcd18e7709b567e40335fa8ebd9225cb50996c4",
+    "repo.frontend.quipusoftapp-frontend": "297aa71df9a04b7305978baf70a2cfaf4b65c746",
+    "root": "7c30d7ff064b53179a6bc3ff3151ee8ea4f5005a"
+  }
+}

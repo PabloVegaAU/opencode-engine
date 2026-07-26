@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:opencode-global:contracts:retrieval-plan-base:v1",
+  "title": "Retrieval Plan Base (v0.4.0 shape)",
+  "description": "Definitive v0.4.0 plan shape. The v0.4.0 router in bin/retrieval/retrieval-router.mjs produces plans that match this schema exactly. The v0.5.0 execution plan composes this base via allOf and adds v0.5.0-specific fields. The base is permissive on additionalProperties so that the v0.5.0 plan can compose; the v0.4.0 router never produces extras, so the base contract is structurally exact in practice.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "enabled",
+    "intent",
+    "strategy",
+    "provider",
+    "reason",
+    "budgets",
+    "fallbacks",
+    "repository",
+    "branch",
+    "commit",
+    "detached",
+    "indexed_commit",
+    "index_generation",
+    "indexed_at",
+    "index_status",
+    "dirty_worktree",
+    "warnings",
+    "error"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.0$"
+    },
+    "enabled": {
+      "type": "boolean"
+    },
+    "intent": {
+      "type": "string",
+      "enum": ["exact", "symbol", "architecture", "semantic", "knowledge"]
+    },
+    "strategy": {
+      "type": "string",
+      "enum": ["exact", "symbol", "architecture", "semantic", "knowledge"]
+    },
+    "provider": {
+      "type": ["string", "null"],
+      "enum": ["ripgrep", "git_grep", "filesystem", "lsp", "codebase-memory", "semantic", null],
+      "description": "v0.4.0 provider enum. v0.5.0 execution only acts on ripgrep, git_grep, filesystem; the others are plan-only and trigger fallback."
+    },
+    "reason": {
+      "type": "string"
+    },
+    "budgets": {
+      "type": "object",
+      "required": ["max_tool_calls", "max_results", "max_chars", "timeout_ms"],
+      "additionalProperties": false,
+      "properties": {
+        "max_tool_calls": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "max_results": { "type": "integer", "minimum": 1, "maximum": 50 },
+        "max_chars": { "type": "integer", "minimum": 1000, "maximum": 50000 },
+        "timeout_ms": { "type": "integer", "minimum": 1000, "maximum": 5000 }
+      }
+    },
+    "fallbacks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["provider", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "provider": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+    "repository": {
+      "type": ["string", "null"]
+    },
+    "branch": {
+      "type": "string"
+    },
+    "commit": {
+      "type": "string"
+    },
+    "detached": {
+      "type": "boolean"
+    },
+    "indexed_commit": {
+      "type": ["string", "null"]
+    },
+    "index_generation": {
+      "type": ["string", "null"]
+    },
+    "indexed_at": {
+      "type": ["string", "null"]
+    },
+    "index_status": {
+      "type": "string",
+      "enum": ["FRESH", "STALE_INDEX", "NOT_INDEXED", "UNKNOWN", "NOT_APPLICABLE"]
+    },
+    "dirty_worktree": {
+      "type": "boolean"
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "error": {
+      "type": ["string", "null"]
+    },
+    "message": {
+      "type": "string",
+      "description": "Optional. Present only on error plans (e.g. INVALID_INTENT)."
+    },
+    "knowledge_paths": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Optional. Present only when strategy == 'knowledge'."
+    }
+  }
+}

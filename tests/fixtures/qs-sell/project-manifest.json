@@ -1,0 +1,26 @@
+{
+  "version": "1",
+  "project_id": "qs-sell-fixture",
+  "repositories": [
+    {
+      "repository_id": "sell-app",
+      "path": "repositories/sell-app",
+      "allowed_read_roots": [
+        "repositories/sell-app"
+      ],
+      "allowed_write_roots": []
+    },
+    {
+      "repository_id": "sell-rules",
+      "path": "repositories/sell-rules",
+      "allowed_read_roots": [
+        "repositories/sell-rules"
+      ],
+      "allowed_write_roots": []
+    }
+  ],
+  "policy": {
+    "max_writers_per_repository": 1,
+    "max_read_only_child_tasks_per_session": 2
+  }
+}
