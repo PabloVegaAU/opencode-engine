@@ -80,3 +80,36 @@ Thumbs.db
 
 # Test scripts (empty placeholders)
 test-*.ps1
+
+# AI Environment generated files
+**/.ai-env/*.json
+!**/.ai-env/environment.json.example
+!**/.ai-env/project-manifest.json.example
+!**/.ai-env/retrieval-policy.json.example
+
+# Retrieval index and graph (generated)
+**/.intelligence/graph.jsonl
+**/.intelligence/index.json
+!**/.intelligence/manifest.json
+
+# Bootstrap and onboarding state
+**/.bootstrap/active-task.txt
+**/.bootstrap/session-*.json
+
+# Tool output and dumps
+**/*.dump
+**/*.trace
+**/tool-output/
+
+# Runtime managed backups (keep source backups)
+**/runtime/backups/managed/
+!**/runtime/backups/managed/*.md
+
+# Package manager lock files (use pnpm)
+package-lock.json
+npm-shrinkwrap.json
+yarn.lock
+
+# Script output logs
+**/scripts/output/
+**/scripts/logs/
