@@ -1,5 +1,5 @@
 {
-  "": "./model-matrix.schema.json",
+  "$schema": "./model-matrix.schema.json",
   "profiles": {
     "go": {
       "model": "opencode-go/qwen3.7-plus",
