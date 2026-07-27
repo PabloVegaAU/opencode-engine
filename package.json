@@ -1,6 +1,6 @@
 {
   "name": "opencode-global",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Neutral, portable OpenCode configuration for multiple computers and projects",
   "type": "module",
   "scripts": {
