@@ -4,7 +4,8 @@
 
 .DESCRIPTION
   This wrapper delegates to the cross-session CLI from the OpenCode runtime.
-  The actual CLI is at: $env:USERPROFILE\.config\opencode\bin\orchestration\cross-session-cli.mjs
+  The actual CLI is at the configured runtime's bin/orchestration/cross-session-cli.mjs.
+  AI_ENV_HOME supplies the default -AiEnvHome value; doctor requires all manifest/spec paths.
 
 .PARAMETER Subcommand
   The cross-session subcommand to run
@@ -42,8 +43,8 @@
 .PARAMETER ExpectedTargetCommit
   Expected target commit OID
 
-.PARAMETER ApproveProtectedRef
-  Approve protected ref update
+  .PARAMETER ApproveLocalIntegration
+  Approve local integration. `-ApproveProtectedRef` is a deprecated alias.
 
 .EXAMPLE
   .\cross-session.ps1 -Subcommand doctor -AiEnvHome $env:AI_ENV_HOME -ProjectRoot (Get-Location).Path ...
@@ -88,17 +89,29 @@ param(
   [Parameter(Mandatory = $false)]
   [string]$ExpectedTargetCommit,
 
-  [switch]$ApproveProtectedRef
+  [Alias("ApproveProtectedRef")]
+  [switch]$ApproveLocalIntegration
 )
 
 $ErrorActionPreference = "Stop"
 
-$CliPath = Join-Path $env:USERPROFILE ".config\opencode\bin\orchestration\cross-session-cli.mjs"
+$RuntimeRoot = if ($env:OPENCODE_CONFIG_DIR) { $env:OPENCODE_CONFIG_DIR } else { Join-Path $env:USERPROFILE ".config\opencode" }
+$CliPath = Join-Path $RuntimeRoot "bin\orchestration\cross-session-cli.mjs"
 
 if (-not (Test-Path -LiteralPath $CliPath)) {
   Write-Warning "Cross-session CLI not found at: $CliPath"
   Write-Warning "This is an OPTIONAL capability. Install OpenCode runtime to enable cross-session orchestration."
   exit 1
+}
+
+if ($Subcommand -eq "doctor") {
+  $missing = @()
+  if (-not $AiEnvHome) { $missing += "AiEnvHome (or AI_ENV_HOME)" }
+  if (-not $ProjectRoot) { $missing += "ProjectRoot" }
+  if (-not $EnvironmentManifest) { $missing += "EnvironmentManifest" }
+  if (-not $ProjectManifest) { $missing += "ProjectManifest" }
+  if (-not $Spec) { $missing += "Spec" }
+  if ($missing.Count -gt 0) { throw "doctor requires: $($missing -join ', ')" }
 }
 
 $args = @($Subcommand)
@@ -114,7 +127,7 @@ if ($TaskKey) { $args += "--task-key"; $args += $TaskKey }
 if ($TargetRepositoryId) { $args += "--target-repository-id"; $args += $TargetRepositoryId }
 if ($TargetRef) { $args += "--target-ref"; $args += $TargetRef }
 if ($ExpectedTargetCommit) { $args += "--expected-target-commit"; $args += $ExpectedTargetCommit }
-if ($ApproveProtectedRef) { $args += "--approve-protected-ref" }
+if ($ApproveLocalIntegration) { $args += "--approve-local-integration" }
 
 & node $CliPath @args
 exit $LASTEXITCODE

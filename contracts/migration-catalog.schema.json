@@ -11,7 +11,7 @@
       "format": "uri"
     },
     "version": {
-      "const": "1"
+      "pattern": "^1(?:\\.0){0,2}$"
     },
     "migrations": {
       "type": "array",

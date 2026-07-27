@@ -4,7 +4,7 @@
   "title": "Update Run Contract v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["run_id", "plan_id", "started_at", "completed_at", "status", "operations", "backup_manifest_path", "journal_entry_id"],
+  "required": ["run_id", "plan_id", "started_at", "completed_at", "status", "operations", "backup_manifest_path", "journal_entry_id", "rollback_id"],
   "properties": {
     "run_id": {
       "type": "string",
@@ -32,10 +32,14 @@
       }
     },
     "backup_manifest_path": {
-      "type": "string"
+      "type": ["string", "null"]
     },
     "journal_entry_id": {
       "type": "string",
+      "format": "uuid"
+    },
+    "rollback_id": {
+      "type": ["string", "null"],
       "format": "uuid"
     }
   },

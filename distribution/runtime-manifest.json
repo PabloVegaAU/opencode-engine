@@ -49,6 +49,14 @@
       "include_patterns": ["*.mjs"],
       "exclude_patterns": []
     },
+    "bin_updates": {
+      "description": "Self-contained ownership update engine binaries",
+      "source_prefix": "bin/updates/",
+      "runtime_prefix": "bin/updates/",
+      "recursive": true,
+      "include_patterns": ["*.mjs"],
+      "exclude_patterns": []
+    },
 
     "templates": {
       "description": "Project-neutral templates for initialization",
@@ -60,7 +68,7 @@
     },
 
     "commands": {
-      "description": "Public command definitions (8 total)",
+      "description": "Public command definitions (11 total)",
       "source_prefix": "commands/",
       "runtime_prefix": "commands/",
       "entries": [
@@ -71,7 +79,10 @@
         { "source": "commands/cross-session.md", "runtime": "commands/cross-session.md" },
         { "source": "commands/init-ai-env.md", "runtime": "commands/init-ai-env.md" },
         { "source": "commands/doctor-ai-env.md", "runtime": "commands/doctor-ai-env.md" },
-        { "source": "commands/update-ai-env.md", "runtime": "commands/update-ai-env.md" }
+        { "source": "commands/update-ai-env.md", "runtime": "commands/update-ai-env.md" },
+        { "source": "commands/ownership-inspect.md", "runtime": "commands/ownership-inspect.md" },
+        { "source": "commands/update-apply.md", "runtime": "commands/update-apply.md" },
+        { "source": "commands/update-rollback.md", "runtime": "commands/update-rollback.md" }
       ]
     },
 
@@ -90,7 +101,8 @@
         { "source": "scripts/opencode-launcher.ps1", "runtime": "scripts/opencode-launcher.ps1" },
         { "source": "scripts/cross-session.ps1", "runtime": "scripts/cross-session.ps1" },
         { "source": "scripts/retrieval-router.ps1", "runtime": "scripts/retrieval-router.ps1" },
-        { "source": "scripts/setup-retrieval-tools.ps1", "runtime": "scripts/setup-retrieval-tools.ps1" }
+        { "source": "scripts/setup-retrieval-tools.ps1", "runtime": "scripts/setup-retrieval-tools.ps1" },
+        { "source": "scripts/ownership-update.ps1", "runtime": "scripts/ownership-update.ps1" }
       ],
       "dev_only": [
         { "source": "scripts/generate-retrieval-validators.mjs", "reason": "Development-only validator generator" },
@@ -106,7 +118,8 @@
       "runtime_prefix": "distribution/",
       "entries": [
         { "source": "distribution/runtime-manifest.json", "runtime": "distribution/runtime-manifest.json" },
-        { "source": "distribution/resolve-runtime-manifest.ps1", "runtime": "distribution/resolve-runtime-manifest.ps1" }
+        { "source": "distribution/resolve-runtime-manifest.ps1", "runtime": "distribution/resolve-runtime-manifest.ps1" },
+        { "source": "distribution/runtime-manifest.schema.json", "runtime": "distribution/runtime-manifest.schema.json" }
       ]
     }
   },
@@ -124,10 +137,13 @@
     "contracts/retrieval-policy.schema.json",
     "contracts/retrieval-index-state.schema.json",
     "commands/go.md",
+    "bin/updates/update-cli.mjs",
+    "scripts/ownership-update.ps1",
     "scripts/install-opencode-global.ps1",
     "scripts/update-opencode-global.ps1",
     "distribution/runtime-manifest.json",
-    "distribution/resolve-runtime-manifest.ps1"
+    "distribution/resolve-runtime-manifest.ps1",
+    "distribution/runtime-manifest.schema.json"
   ],
 
   "notes": [

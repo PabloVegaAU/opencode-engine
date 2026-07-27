@@ -1,109 +1,46 @@
-/**
- * BackupManager - OpenCode Global v0.5.0
- *
- * Creates point-in-time snapshots with backup manifest generation.
- */
+import { createHash, randomUUID } from 'node:crypto';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { normalizeRelativePath, requireAbsoluteRoot, resolveSafePath } from './path-safety.mjs';
 
-import { createHash } from 'node:crypto';
-import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync } from 'node:fs';
-import { join, basename } from 'node:path';
+const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+export function getDefaultBackupDir() { const home = process.env.AI_ENV_HOME || process.env.OPENCODE_ENV_HOME; return home ? join(home, 'backups') : null; }
 
-/**
- * Generate a UUID v4 string
- * @returns {string}
- */
-function generateUUID() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
-
-/**
- * Create a point-in-time backup
- * @param {string} planId - UUID of the plan this backup is for
- * @param {string[]} artifactsToBackup - Array of file paths to backup
- * @param {string} backupBaseDir - Base directory for backups (e.g., AI_ENV_HOME/backups)
- * @returns {Promise<object>} Backup manifest matching backup-manifest.schema.json
- */
-export async function createBackup(planId, artifactsToBackup, backupBaseDir) {
-  const { gzipSync } = await import('node:zlib');
-
-  const backupId = generateUUID();
-  const createdAt = new Date().toISOString();
-
-  // Create timestamped backup directory
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const backupDir = join(backupBaseDir, timestamp);
-  mkdirSync(backupDir, { recursive: true });
-
-  const artifacts = [];
-
-  for (const artifactPath of artifactsToBackup) {
-    if (!existsSync(artifactPath)) {
-      throw new Error(`Artifact not found: ${artifactPath}`);
-    }
-
-    const stats = statSync(artifactPath);
-    const content = readFileSync(artifactPath);
-
-    // Compute hash of original content
-    const hash = createHash('sha256').update(content).digest('hex');
-
-    // Determine if compression should be applied
-    // Compress if file is larger than 1KB and compression reduces size
-    let artifactContent = content;
-    let compressed = false;
-
-    if (stats.size > 1024) {
-      try {
-        const compressedContent = gzipSync(content);
-        if (compressedContent.length < content.length) {
-          artifactContent = compressedContent;
-          compressed = true;
-        }
-      } catch {
-        // Compression failed, use original
-      }
-    }
-
-    // Write the artifact (compressed or original)
-    const fileName = basename(artifactPath);
-    const backupPath = join(backupDir, fileName);
-    writeFileSync(backupPath, artifactContent);
-
-    artifacts.push({
-      path: artifactPath,
-      sha256: hash,
-      size: stats.size,
-      mtime: stats.mtime.toISOString()
-    });
+/** Creates an uncompressed, hierarchy-preserving snapshot. */
+export async function createBackup(planId, artifactPaths, backupBaseDir, environmentRoot) {
+  // Compatibility for the pre-v0.6 module API. Runtime callers always supply
+  // environmentRoot and therefore never persist this legacy absolute-path form.
+  if (!environmentRoot && !process.env.AI_ENV_HOME && artifactPaths.every(p => typeof p === 'string' && (p.includes('\\') || p.startsWith('/')))) {
+    const storage = join(backupBaseDir, randomUUID()); mkdirSync(storage, { recursive: true }); const artifacts=[];
+    for (const source of artifactPaths) { if(!existsSync(source)) throw new Error(`Artifact not found: ${source}`); const bytes=readFileSync(source), stat=statSync(source), name=source.split(/[\\/]/).pop(); copyFileSync(source,join(storage,name)); artifacts.push({path:source,sha256:hash(bytes),size:bytes.length,mtime:stat.mtime.toISOString()}); }
+    const manifest={backup_id:randomUUID(),created_at:new Date().toISOString(),plan_id:planId,artifacts,storage_path:storage};writeFileSync(join(storage,'backup-manifest.json'),JSON.stringify(manifest,null,2));return manifest;
   }
-
-  const manifest = {
-    backup_id: backupId,
-    created_at: createdAt,
-    plan_id: planId,
-    artifacts,
-    storage_path: backupDir
-  };
-
-  // Write manifest file
-  const manifestPath = join(backupDir, 'backup-manifest.json');
-  writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
-
+  const root = requireAbsoluteRoot(environmentRoot || process.env.AI_ENV_HOME, 'AI_ENV_HOME');
+  const base = requireAbsoluteRoot(backupBaseDir || join(root, 'backups'), 'backup base');
+  const backupId = randomUUID();
+  const storagePath = `backups/${backupId}`;
+  const storage = join(root, storagePath);
+  mkdirSync(join(storage, 'artifacts'), { recursive: true });
+  const artifacts = [];
+  for (const raw of artifactPaths) {
+    const relativePath = normalizeRelativePath(raw);
+    const source = resolveSafePath(root, relativePath, { allowMissing: false }).path;
+    if (!existsSync(source)) throw new Error(`Artifact not found: ${relativePath}`);
+    const bytes = readFileSync(source); const stat = statSync(source);
+    const backup_ref = `artifacts/${relativePath}`;
+    const destination = resolveSafePath(storage, backup_ref).path;
+    mkdirSync(join(destination, '..'), { recursive: true }); copyFileSync(source, destination);
+    artifacts.push({ path: relativePath, backup_ref, sha256: hash(bytes), bytes: bytes.length, size: bytes.length, mtime: stat.mtime.toISOString() });
+  }
+  const manifest = { backup_id: backupId, created_at: new Date().toISOString(), plan_id: planId, artifacts, storage_path: storagePath };
+  writeFileSync(join(storage, 'backup-manifest.json'), JSON.stringify(manifest, null, 2));
   return manifest;
 }
 
-/**
- * Get default backup base directory (AI_ENV_HOME/backups)
- * @returns {string|null}
- */
-export function getDefaultBackupDir() {
-  const envHome = process.env.AI_ENV_HOME || process.env.OPENCODE_ENV_HOME;
-  if (!envHome) return null;
-  return join(envHome, 'backups');
+export function verifyBackup(manifest, environmentRoot) {
+  const root = requireAbsoluteRoot(environmentRoot, 'AI_ENV_HOME');
+  const storage = resolveSafePath(root, manifest.storage_path, { allowMissing: false }).path;
+  return manifest.artifacts.every(item => {
+    try { const bytes = readFileSync(resolveSafePath(storage, item.backup_ref, { allowMissing: false }).path); return bytes.length === item.bytes && hash(bytes) === item.sha256; } catch { return false; }
+  });
 }
-
-export default { createBackup, getDefaultBackupDir };

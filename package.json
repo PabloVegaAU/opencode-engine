@@ -4,7 +4,7 @@
   "description": "Neutral, portable OpenCode configuration for multiple computers and projects",
   "type": "module",
   "scripts": {
-    "test:unit": "node --test tests/*.test.mjs",
+    "test:unit": "node --test tests/*.test.mjs tests/updates/*.test.mjs",
     "test:integration": "node --test tests/integration/*.test.mjs",
     "test:all": "pnpm test:unit && pnpm test:integration",
     "test": "pnpm test:all",

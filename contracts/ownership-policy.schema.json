@@ -1,14 +1,15 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Ownership Policy Schema",
-  "description": "Neutral per-project ownership policy for OpenCode Global v0.5.0",
+  "$id": "urn:opencode-global:contracts:ownership-policy:v1",
+  "description": "Neutral per-project ownership policy for OpenCode Global v0.6.0",
   "type": "object",
   "required": ["version", "rules", "default_category", "blocked_categories"],
   "additionalProperties": false,
   "properties": {
     "version": {
       "type": "string",
-      "pattern": "^1$",
+      "pattern": "^1(?:\\.0){0,2}$",
       "description": "Schema version must be 1"
     },
     "rules": {

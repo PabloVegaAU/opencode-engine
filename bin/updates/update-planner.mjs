@@ -176,7 +176,7 @@ function determineOperation(artifactPath, category, catalog, sourceVersion, targ
  * @param {Catalog} catalog - Migration catalog
  * @returns {Object} Update plan matching update-plan.schema.json
  */
-export function generateUpdatePlan(classificationMap, sourceVersion, targetVersion, catalog) {
+export function generateUpdatePlan(classificationMap, sourceVersion, targetVersion, catalog, desiredContent = {}) {
   const planId = randomUUID();
   const createdAt = new Date().toISOString();
 
@@ -187,12 +187,14 @@ export function generateUpdatePlan(classificationMap, sourceVersion, targetVersi
   for (const [artifactPath, category] of Object.entries(classificationMap)) {
     const operation = determineOperation(artifactPath, category, catalog, sourceVersion, targetVersion);
 
-    operations.push({
+    const record = {
       type: operation.type,
-      path: artifactPath,
+      path: artifactPath.replace(/\\/g, '/'),
       migration_id: operation.migration_id,
       reason: operation.reason
-    });
+    };
+    if ((record.type === 'create' || record.type === 'update') && typeof desiredContent[artifactPath] === 'string') record.content = desiredContent[artifactPath];
+    operations.push(record);
 
     if (operation.type === 'block') {
       blockedCount++;

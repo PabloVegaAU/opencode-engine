@@ -32,19 +32,22 @@
         "required": [
           "path",
           "sha256",
-          "size",
-          "mtime"
+          "size", "bytes", "backup_ref", "mtime"
         ],
         "properties": {
           "path": {
             "type": "string"
           },
+          "backup_ref": { "type": "string" },
           "sha256": {
             "type": "string",
             "pattern": "^[0-9a-f]{64}$"
           },
           "size": {
-            "type": "number"
+            "type": "integer", "minimum": 0
+          },
+          "bytes": {
+            "type": "integer", "minimum": 0
           },
           "mtime": {
             "type": "string",
@@ -54,7 +57,7 @@
       }
     },
     "storage_path": {
-      "type": "string"
+      "type": "string", "pattern": "^(?!/)(?![A-Za-z]:)"
     }
   }
 }

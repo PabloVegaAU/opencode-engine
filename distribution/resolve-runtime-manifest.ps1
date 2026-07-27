@@ -66,6 +66,103 @@ function Get-Manifest {
   }
 }
 
+function Get-ManifestSourceRoot {
+  return [System.IO.Path]::GetFullPath((Split-Path -Parent (Split-Path -Parent $ManifestPath)))
+}
+
+function Test-SafeManifestRelativePath {
+  param([string]$Path, [switch]$AllowTrailingSeparator)
+  if ([string]::IsNullOrWhiteSpace($Path) -or [System.IO.Path]::IsPathRooted($Path)) { return $false }
+  $normalized = $Path -replace '\\', '/'
+  if ($AllowTrailingSeparator) { $normalized = $normalized.TrimEnd('/') }
+  if ([string]::IsNullOrWhiteSpace($normalized)) { return $false }
+  foreach ($segment in $normalized.Split('/')) {
+    if ([string]::IsNullOrWhiteSpace($segment) -or $segment -eq '.' -or $segment -eq '..') { return $false }
+  }
+  return $true
+}
+
+function Resolve-ContainedManifestPath {
+  param([string]$Root, [string]$RelativePath, [switch]$AllowTrailingSeparator)
+  if (-not (Test-SafeManifestRelativePath -Path $RelativePath -AllowTrailingSeparator:$AllowTrailingSeparator)) {
+    throw "Unsafe manifest path: '$RelativePath'"
+  }
+  $canonicalRoot = [System.IO.Path]::GetFullPath($Root).TrimEnd('\', '/')
+  $candidate = [System.IO.Path]::GetFullPath((Join-Path $canonicalRoot $RelativePath))
+  $prefix = $canonicalRoot + [System.IO.Path]::DirectorySeparatorChar
+  if (-not $candidate.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw "Manifest path escapes its root: '$RelativePath'"
+  }
+  return $candidate
+}
+
+function Test-ReparsePointChain {
+  param([string]$Root, [string]$Path)
+  $canonicalRoot = [System.IO.Path]::GetFullPath($Root).TrimEnd('\', '/')
+  $current = [System.IO.Path]::GetFullPath($Path)
+  while ($current.StartsWith($canonicalRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+    if (Test-Path -LiteralPath $current) {
+      $item = Get-Item -LiteralPath $current -Force
+      if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+        return $true
+      }
+    }
+    if ([string]::Equals($current.TrimEnd('\', '/'), $canonicalRoot, [System.StringComparison]::OrdinalIgnoreCase)) { break }
+    $parent = Split-Path -Parent $current
+    if ($parent -eq $current) { break }
+    $current = $parent
+  }
+  return $false
+}
+
+function Assert-SafeSourcePath {
+  param([string]$SourceRelativePath)
+  $root = Get-ManifestSourceRoot
+  $path = Resolve-ContainedManifestPath -Root $root -RelativePath $SourceRelativePath
+  if (Test-ReparsePointChain -Root $root -Path $path) { throw "Source path contains a reparse point: '$SourceRelativePath'" }
+  return $path
+}
+
+function Assert-SafeRuntimePath {
+  param([string]$TargetRoot, [string]$RuntimeRelativePath)
+  $path = Resolve-ContainedManifestPath -Root $TargetRoot -RelativePath $RuntimeRelativePath
+  if (Test-ReparsePointChain -Root $TargetRoot -Path $path) { throw "Destination path contains a reparse point: '$RuntimeRelativePath'" }
+  return $path
+}
+
+function Get-Sha256FromBytes {
+  param([byte[]]$Bytes)
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try { return -join ($sha.ComputeHash($Bytes) | ForEach-Object { $_.ToString('x2') }) }
+  finally { $sha.Dispose() }
+}
+
+function New-ImmutableSourceSnapshot {
+  param(
+    [object[]]$Inventory,
+    [Int64]$MaximumBytes = 67108864
+  )
+  $snapshot = @{}
+  [Int64]$totalBytes = 0
+  foreach ($entry in $Inventory) {
+    $sourcePath = Assert-SafeSourcePath -SourceRelativePath $entry.source
+    if (-not (Test-Path -LiteralPath $sourcePath -PathType Leaf)) {
+      throw "Missing inventory source: $($entry.source)"
+    }
+    $bytes = [System.IO.File]::ReadAllBytes($sourcePath)
+    $totalBytes += $bytes.LongLength
+    if ($totalBytes -gt $MaximumBytes) {
+      throw "Distribution source snapshot exceeds the $MaximumBytes byte safety cap before any runtime write."
+    }
+    $snapshot[$entry.source] = [pscustomobject]@{
+      Bytes = $bytes
+      Sha256 = Get-Sha256FromBytes -Bytes $bytes
+      Length = $bytes.LongLength
+    }
+  }
+  return $snapshot
+}
+
 function Get-SourceToRuntimeMapping {
   param([object]$Manifest)
 
@@ -85,6 +182,7 @@ function Get-SourceToRuntimeMapping {
     if ($null -ne $cat.entries -and $cat.entries.Count -gt 0) {
       foreach ($entry in $cat.entries) {
         if ($null -ne $entry.source -and $null -ne $entry.runtime) {
+          if (-not (Test-SafeManifestRelativePath -Path $entry.source) -or -not (Test-SafeManifestRelativePath -Path $entry.runtime)) { throw "Unsafe entry in category '$catName'" }
           $mapping[$entry.source] = $entry.runtime
         }
       }
@@ -96,6 +194,7 @@ function Get-SourceToRuntimeMapping {
         if ($null -eq $tree.source -or $null -eq $tree.runtime) { continue }
         $sourceBase = $tree.source
         $runtimeBase = $tree.runtime
+        if (-not (Test-SafeManifestRelativePath -Path $sourceBase -AllowTrailingSeparator) -or -not (Test-SafeManifestRelativePath -Path $runtimeBase -AllowTrailingSeparator)) { throw "Unsafe recursive tree in category '$catName'" }
         $excludePatterns = if ($null -ne $tree.exclude -and $tree.exclude.Count -gt 0) { $tree.exclude } else { @() }
         $resolved = Resolve-RecursivePaths -SourceBase $sourceBase -RuntimeBase $runtimeBase -ExcludePatterns $excludePatterns
         foreach ($k in $resolved.Keys) {
@@ -106,6 +205,7 @@ function Get-SourceToRuntimeMapping {
 
     # Recursive with include/exclude patterns
     if ($null -ne $cat.recursive -and $null -ne $cat.include_patterns -and $cat.include_patterns.Count -gt 0) {
+      if (-not (Test-SafeManifestRelativePath -Path $cat.source_prefix -AllowTrailingSeparator) -or -not (Test-SafeManifestRelativePath -Path $cat.runtime_prefix -AllowTrailingSeparator)) { throw "Unsafe recursive category '$catName'" }
       $excludePatterns = if ($null -ne $cat.exclude_patterns -and $cat.exclude_patterns.Count -gt 0) { $cat.exclude_patterns } else { @() }
       $resolved = Resolve-RecursivePaths -SourceBase $cat.source_prefix -RuntimeBase $cat.runtime_prefix -IncludePatterns $cat.include_patterns -ExcludePatterns $excludePatterns
       foreach ($k in $resolved.Keys) {
@@ -230,7 +330,7 @@ function Get-Inventory {
             # Apply exclusions
             $excluded = $false
             foreach ($pattern in $excludePatterns) {
-              if ($relativePath -eq $pattern) {
+              if ($relativePath -eq $pattern -or $relativePath -like $pattern) {
                 $excluded = $true
                 break
               }

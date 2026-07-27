@@ -1,5 +1,5 @@
 {
-  "$schema": "./model-matrix.schema.json",
+  "": "./model-matrix.schema.json",
   "profiles": {
     "go": {
       "model": "opencode-go/qwen3.7-plus",
@@ -13,7 +13,8 @@
         "dev": { "model": "opencode-go/kimi-k2.7-code" },
         "infra": { "model": "opencode-go/deepseek-v4-pro", "variant": "medium" },
         "architect_pro": { "model": "opencode-go/glm-5.2", "variant": "high" },
-        "review_pro": { "model": "opencode-go/qwen3.7-max" }
+        "review_pro": { "model": "opencode-go/qwen3.7-max" },
+        "documentalist": { "model": "opencode-go/qwen3.7-plus" }
       },
       "categories": {
         "hybrid-content": { "model": "opencode-go/qwen3.7-plus" }
@@ -31,7 +32,8 @@
         "dev": { "model": "openai/gpt-5.6-terra", "variant": "medium" },
         "infra": { "model": "openai/gpt-5.6-terra", "variant": "medium" },
         "architect_pro": { "model": "openai/gpt-5.6-sol", "variant": "high" },
-        "review_pro": { "model": "openai/gpt-5.6-sol", "variant": "high" }
+        "review_pro": { "model": "openai/gpt-5.6-sol", "variant": "high" },
+        "documentalist": { "model": "openai/gpt-5.6-terra", "variant": "medium" }
       },
       "categories": {
         "hybrid-content": { "model": "openai/gpt-5.6-terra", "variant": "medium" }
@@ -49,7 +51,8 @@
         "dev": { "model": "opencode-go/kimi-k2.7-code" },
         "infra": { "model": "opencode-go/deepseek-v4-pro", "variant": "medium" },
         "architect_pro": { "model": "openai/gpt-5.6-sol", "variant": "high" },
-        "review_pro": { "model": "openai/gpt-5.6-sol", "variant": "high" }
+        "review_pro": { "model": "openai/gpt-5.6-sol", "variant": "high" },
+        "documentalist": { "model": "opencode-go/qwen3.7-plus" }
       },
       "categories": {
         "hybrid-content": { "model": "openai/gpt-5.6-terra", "variant": "medium" }
@@ -67,7 +70,8 @@
         "dev": { "model": "minimax/MiniMax-M2.7" },
         "infra": { "model": "minimax/MiniMax-M2.7" },
         "architect_pro": { "model": "minimax/MiniMax-M2.7" },
-        "review_pro": { "model": "minimax/MiniMax-M2.7" }
+        "review_pro": { "model": "minimax/MiniMax-M2.7" },
+        "documentalist": { "model": "minimax/MiniMax-M2.7" }
       },
       "categories": {
         "hybrid-content": { "model": "minimax/MiniMax-M2.7" }

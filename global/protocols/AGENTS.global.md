@@ -24,6 +24,15 @@
 - Discover available agents before relying on them.
 - The installed runtime is expected to expose native agents such as `build`, `plan`, `general`, and `explore`, but actual behavior must be verified against the running version.
 
+## Agent Modes
+
+The official OpenCode agent modes are:
+- **primary** — main interactive agent
+- **subagent** — delegated task agent
+- **all** — all agents active
+
+No other mode values are valid. The launcher validates all discovered agent modes against these three values and rejects invalid modes before launching.
+
 ## Writes And Concurrency
 
 - Read-only agents must not write.
@@ -43,12 +52,14 @@
 - Global owns only neutral runtime defaults, schemas, validators, profiles, routing, and bootstrap tooling.
 - Each project owns its agents, MCP, skills, prompts, specialized permissions, Speckit, technologies, and `.intelligence/` content.
 
-## Real Bootstrap
+## Project Lifecycle
 
 - `/init` is the official OpenCode command for creating or improving the local `AGENTS.md`.
-- `/init-orchestration` runs the canonical writer `scripts/init-opencode-project.ps1`.
-- `bin/init-intelligence.mjs` is a compatibility wrapper, not the canonical writer.
-- The bootstrap does not create agents, MCP, skills, technologies, or project topology.
+- `/init-ai-env` initializes neutral runtime artifacts; retrieval policy is optional and only added when explicitly requested.
+- `/doctor-ai-env` diagnoses project AI environment health.
+- `/update-ai-env` provides read-only diagnostics and planning.
+- The bootstrap never creates custom agent files, MCP configurations, skills, or project topology.
+- Project ownership rules determine what belongs to the project vs. global.
 
 ## Public Cross-Session Commands
 
@@ -61,7 +72,7 @@
 
 ## Retrieval Policy
 
-OpenCode Global v0.4.0 provides deterministic retrieval routing via `bin/retrieval/retrieval-router.mjs`. Retrieval is **opt-in per project** — a project without `.ai-env/retrieval-policy.json` is not adopted and the router returns `enabled:false` with reason `PROJECT_NOT_ADOPTED`.
+OpenCode Global v0.5.0 provides deterministic retrieval routing via `bin/retrieval/retrieval-router.mjs`. Retrieval is **opt-in per project** — a project without `.ai-env/retrieval-policy.json` is not adopted and the router returns `enabled:false` with reason `PROJECT_NOT_ADOPTED`.
 
 ### Do Not Assume Ripgrep Is Installed
 

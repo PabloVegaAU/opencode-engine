@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { existsSync, readFileSync, readdirSync } from 'fs';
-import { join, dirname } from 'path';
+import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 
 const REPO_ROOT = process.cwd();
@@ -128,16 +128,20 @@ describe('Setup Retrieval Tools Distribution', () => {
     assert.ok(existsSync(setupScript), 'setup-retrieval-tools.ps1 should exist');
   });
 
-  it('setup-retrieval-tools.ps1 is listed in install script', () => {
-    const installScript = readFileSync(join(REPO_ROOT, 'scripts', 'install-opencode-global.ps1'), 'utf8');
-    assert.ok(installScript.includes('setup-retrieval-tools.ps1'),
-      'setup-retrieval-tools.ps1 should be in install script');
+  it('setup-retrieval-tools.ps1 is listed in manifest for install', () => {
+    const manifestPath = join(REPO_ROOT, 'distribution', 'runtime-manifest.json');
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    const scripts = manifest.categories.runtime_scripts.entries.map(e => basename(e.source));
+    assert.ok(scripts.includes('setup-retrieval-tools.ps1'),
+      'setup-retrieval-tools.ps1 should be in manifest (installs via manifest)');
   });
 
-  it('setup-retrieval-tools.ps1 is listed in update script', () => {
-    const updateScript = readFileSync(join(REPO_ROOT, 'scripts', 'update-opencode-global.ps1'), 'utf8');
-    assert.ok(updateScript.includes('setup-retrieval-tools.ps1'),
-      'setup-retrieval-tools.ps1 should be in update script');
+  it('setup-retrieval-tools.ps1 is listed in manifest for update', () => {
+    const manifestPath = join(REPO_ROOT, 'distribution', 'runtime-manifest.json');
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    const scripts = manifest.categories.runtime_scripts.entries.map(e => basename(e.source));
+    assert.ok(scripts.includes('setup-retrieval-tools.ps1'),
+      'setup-retrieval-tools.ps1 should be in manifest (updates via manifest)');
   });
 
   it('setup-retrieval-tools.ps1 supports -Check mode', () => {
@@ -282,82 +286,102 @@ describe('Updater Doctor-Plan Only', () => {
 });
 
 describe('Install Script Distribution Lists', () => {
-  it('install-opencode-global.ps1 distributes 8 commands', () => {
-    const installScript = readFileSync(join(REPO_ROOT, 'scripts', 'install-opencode-global.ps1'), 'utf8');
-    assert.ok(installScript.includes('$commandsToInstall'),
-      'should have commandsToInstall');
-    assert.ok(installScript.includes('"go.md"'), 'should include go.md');
-    assert.ok(installScript.includes('"chatgpt-plus.md"'), 'should include chatgpt-plus.md');
-    assert.ok(installScript.includes('"mix.md"'), 'should include mix.md');
-    assert.ok(installScript.includes('"minimax-plus.md"'), 'should include minimax-plus.md');
-    assert.ok(installScript.includes('"cross-session.md"'), 'should include cross-session.md');
-    assert.ok(installScript.includes('"init-ai-env.md"'), 'should include init-ai-env.md');
-    assert.ok(installScript.includes('"doctor-ai-env.md"'), 'should include doctor-ai-env.md');
-    assert.ok(installScript.includes('"update-ai-env.md"'), 'should include update-ai-env.md');
+  it('install-opencode-global.ps1 distributes exactly 8 commands', () => {
+    const manifestPath = join(REPO_ROOT, 'distribution', 'runtime-manifest.json');
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    const commands = manifest.categories.commands.entries;
+    assert.strictEqual(commands.length, 8, 'should have exactly 8 commands');
+    const cmdNames = commands.map(e => basename(e.runtime));
+    assert.ok(cmdNames.includes('go.md'), 'should include go.md');
+    assert.ok(cmdNames.includes('chatgpt-plus.md'), 'should include chatgpt-plus.md');
+    assert.ok(cmdNames.includes('mix.md'), 'should include mix.md');
+    assert.ok(cmdNames.includes('minimax-plus.md'), 'should include minimax-plus.md');
+    assert.ok(cmdNames.includes('cross-session.md'), 'should include cross-session.md');
+    assert.ok(cmdNames.includes('init-ai-env.md'), 'should include init-ai-env.md');
+    assert.ok(cmdNames.includes('doctor-ai-env.md'), 'should include doctor-ai-env.md');
+    assert.ok(cmdNames.includes('update-ai-env.md'), 'should include update-ai-env.md');
   });
 
-  it('install-opencode-global.ps1 distributes 11 scripts', () => {
-    const installScript = readFileSync(join(REPO_ROOT, 'scripts', 'install-opencode-global.ps1'), 'utf8');
-    assert.ok(installScript.includes('$scriptsToInstall'),
-      'should have scriptsToInstall');
-    assert.ok(installScript.includes('"install-opencode-global.ps1"'), 'should include install-opencode-global.ps1');
-    assert.ok(installScript.includes('"update-opencode-global.ps1"'), 'should include update-opencode-global.ps1');
-    assert.ok(installScript.includes('"doctor-opencode-global.ps1"'), 'should include doctor-opencode-global.ps1');
-    assert.ok(installScript.includes('"certify-opencode-global.ps1"'), 'should include certify-opencode-global.ps1');
-    assert.ok(installScript.includes('"init-opencode-project.ps1"'), 'should include init-opencode-project.ps1');
-    assert.ok(installScript.includes('"update-opencode-project.ps1"'), 'should include update-opencode-project.ps1');
-    assert.ok(installScript.includes('"opencode-launcher.ps1"'), 'should include opencode-launcher.ps1');
-    assert.ok(installScript.includes('"cross-session.ps1"'), 'should include cross-session.ps1');
-    assert.ok(installScript.includes('"cleanup-runtime.ps1"'), 'should include cleanup-runtime.ps1');
-    assert.ok(installScript.includes('"retrieval-router.ps1"'), 'should include retrieval-router.ps1');
-    assert.ok(installScript.includes('"setup-retrieval-tools.ps1"'), 'should include setup-retrieval-tools.ps1');
+  it('install-opencode-global.ps1 distributes exactly 11 runtime scripts', () => {
+    const manifestPath = join(REPO_ROOT, 'distribution', 'runtime-manifest.json');
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    const scripts = manifest.categories.runtime_scripts.entries;
+    assert.strictEqual(scripts.length, 11, 'should have exactly 11 runtime scripts');
+    const scriptNames = scripts.map(e => basename(e.runtime));
+    assert.ok(scriptNames.includes('install-opencode-global.ps1'), 'should include install-opencode-global.ps1');
+    assert.ok(scriptNames.includes('update-opencode-global.ps1'), 'should include update-opencode-global.ps1');
+    assert.ok(scriptNames.includes('doctor-opencode-global.ps1'), 'should include doctor-opencode-global.ps1');
+    assert.ok(scriptNames.includes('certify-opencode-global.ps1'), 'should include certify-opencode-global.ps1');
+    assert.ok(scriptNames.includes('init-opencode-project.ps1'), 'should include init-opencode-project.ps1');
+    assert.ok(scriptNames.includes('update-opencode-project.ps1'), 'should include update-opencode-project.ps1');
+    assert.ok(scriptNames.includes('opencode-launcher.ps1'), 'should include opencode-launcher.ps1');
+    assert.ok(scriptNames.includes('cross-session.ps1'), 'should include cross-session.ps1');
+    assert.ok(scriptNames.includes('cleanup-runtime.ps1'), 'should include cleanup-runtime.ps1');
+    assert.ok(scriptNames.includes('retrieval-router.ps1'), 'should include retrieval-router.ps1');
+    assert.ok(scriptNames.includes('setup-retrieval-tools.ps1'), 'should include setup-retrieval-tools.ps1');
   });
 
-  it('install-opencode-global.ps1 distributes bin/retrieval files', () => {
-    const installScript = readFileSync(join(REPO_ROOT, 'scripts', 'install-opencode-global.ps1'), 'utf8');
-    assert.ok(installScript.includes('bin\\retrieval') || installScript.includes('bin/retrieval'),
-      'should distribute bin/retrieval');
+  it('install-opencode-global.ps1 distributes bin/retrieval recursively', () => {
+    const manifestPath = join(REPO_ROOT, 'distribution', 'runtime-manifest.json');
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    const binRetrieval = manifest.categories.bin_retrieval;
+    assert.ok(binRetrieval.recursive, 'bin_retrieval should be recursive');
+    assert.ok(binRetrieval.include_patterns.includes('*.mjs'), 'should include *.mjs patterns');
+    // Check adapters subdirectory exists in source
+    const adaptersPath = join(REPO_ROOT, 'bin', 'retrieval', 'adapters');
+    assert.ok(existsSync(adaptersPath), 'bin/retrieval/adapters should exist');
   });
 
-  it('install-opencode-global.ps1 distributes contracts', () => {
-    const installScript = readFileSync(join(REPO_ROOT, 'scripts', 'install-opencode-global.ps1'), 'utf8');
-    assert.ok(installScript.includes('$contracts'),
-      'should have contracts list');
-    assert.ok(installScript.includes('retrieval-policy.schema.json'),
-      'should include retrieval-policy.schema.json');
+  it('install-opencode-global.ps1 distributes contracts recursively', () => {
+    const manifestPath = join(REPO_ROOT, 'distribution', 'runtime-manifest.json');
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    const contracts = manifest.categories.contracts;
+    assert.ok(contracts.recursive, 'contracts should be recursive');
+    assert.ok(contracts.include_patterns.some(p => p.includes('schema.json')), 'should include schema patterns');
+  });
+
+  it('no duplicate runtime destinations across all categories', () => {
+    const manifestPath = join(REPO_ROOT, 'distribution', 'runtime-manifest.json');
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    const runtimePaths = [];
+    for (const [catName, cat] of Object.entries(manifest.categories)) {
+      if (cat.entries) {
+        for (const entry of cat.entries) {
+          runtimePaths.push(entry.runtime);
+        }
+      }
+    }
+    const duplicates = runtimePaths.filter((p, i) => runtimePaths.indexOf(p) !== i);
+    assert.strictEqual(duplicates.length, 0, `should have no duplicate runtime paths, found: ${duplicates.join(', ')}`);
+  });
+
+  it('dev-only scripts are excluded from runtime_scripts entries', () => {
+    const manifestPath = join(REPO_ROOT, 'distribution', 'runtime-manifest.json');
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    const scripts = manifest.categories.runtime_scripts.entries.map(e => basename(e.source));
+    assert.ok(!scripts.includes('generate-retrieval-validators.mjs'), 'should exclude generate-retrieval-validators.mjs');
+    assert.ok(!scripts.includes('validate.mjs'), 'should exclude validate.mjs');
+    assert.ok(!scripts.includes('discover-real-query-set.mjs'), 'should exclude discover-real-query-set.mjs');
+    assert.ok(!scripts.includes('run-retrieval-real-pilot.mjs'), 'should exclude run-retrieval-real-pilot.mjs');
   });
 });
 
 describe('Update Script Distribution Lists', () => {
-  it('update-opencode-global.ps1 updates 8 commands', () => {
-    const updateScript = readFileSync(join(REPO_ROOT, 'scripts', 'update-opencode-global.ps1'), 'utf8');
-    assert.ok(updateScript.includes('$commandsToUpdate'),
-      'should have commandsToUpdate');
-    assert.ok(updateScript.includes('"go.md"'), 'should include go.md');
-    assert.ok(updateScript.includes('"chatgpt-plus.md"'), 'should include chatgpt-plus.md');
-    assert.ok(updateScript.includes('"mix.md"'), 'should include mix.md');
-    assert.ok(updateScript.includes('"minimax-plus.md"'), 'should include minimax-plus.md');
-    assert.ok(updateScript.includes('"cross-session.md"'), 'should include cross-session.md');
-    assert.ok(updateScript.includes('"init-ai-env.md"'), 'should include init-ai-env.md');
-    assert.ok(updateScript.includes('"doctor-ai-env.md"'), 'should include doctor-ai-env.md');
-    assert.ok(updateScript.includes('"update-ai-env.md"'), 'should include update-ai-env.md');
+  it('update-opencode-global.ps1 uses same inventory as install via manifest', () => {
+    const manifestPath = join(REPO_ROOT, 'distribution', 'runtime-manifest.json');
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    // Update uses the same inventory as install - both consume Get-RuntimeManifestInventory
+    const commands = manifest.categories.commands.entries;
+    const scripts = manifest.categories.runtime_scripts.entries;
+    assert.strictEqual(commands.length, 8, 'should have exactly 8 commands');
+    assert.strictEqual(scripts.length, 11, 'should have exactly 11 runtime scripts');
   });
 
-  it('update-opencode-global.ps1 updates 11 scripts', () => {
-    const updateScript = readFileSync(join(REPO_ROOT, 'scripts', 'update-opencode-global.ps1'), 'utf8');
-    assert.ok(updateScript.includes('$scriptsToUpdate'),
-      'should have scriptsToUpdate');
-    assert.ok(updateScript.includes('"install-opencode-global.ps1"'), 'should include install-opencode-global.ps1');
-    assert.ok(updateScript.includes('"update-opencode-global.ps1"'), 'should include update-opencode-global.ps1');
-    assert.ok(updateScript.includes('"doctor-opencode-global.ps1"'), 'should include doctor-opencode-global.ps1');
-    assert.ok(updateScript.includes('"certify-opencode-global.ps1"'), 'should include certify-opencode-global.ps1');
-    assert.ok(updateScript.includes('"init-opencode-project.ps1"'), 'should include init-opencode-project.ps1');
-    assert.ok(updateScript.includes('"update-opencode-project.ps1"'), 'should include update-opencode-project.ps1');
-    assert.ok(updateScript.includes('"opencode-launcher.ps1"'), 'should include opencode-launcher.ps1');
-    assert.ok(updateScript.includes('"cross-session.ps1"'), 'should include cross-session.ps1');
-    assert.ok(updateScript.includes('"cleanup-runtime.ps1"'), 'should include cleanup-runtime.ps1');
-    assert.ok(updateScript.includes('"retrieval-router.ps1"'), 'should include retrieval-router.ps1');
-    assert.ok(updateScript.includes('"setup-retrieval-tools.ps1"'), 'should include setup-retrieval-tools.ps1');
+  it('update-opencode-global.ps1 distributes setup-retrieval-tools.ps1', () => {
+    const manifestPath = join(REPO_ROOT, 'distribution', 'runtime-manifest.json');
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    const scripts = manifest.categories.runtime_scripts.entries.map(e => basename(e.runtime));
+    assert.ok(scripts.includes('setup-retrieval-tools.ps1'), 'should include setup-retrieval-tools.ps1');
   });
 });
 

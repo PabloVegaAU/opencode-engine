@@ -39,7 +39,7 @@
       }
     },
     "blocked_count": {
-      "type": "number",
+      "type": "integer",
       "minimum": 0
     },
     "requires_approval": {
@@ -67,6 +67,9 @@
         "reason": {
           "type": "string",
           "minLength": 1
+        },
+        "content": {
+          "type": "string"
         }
       }
     }

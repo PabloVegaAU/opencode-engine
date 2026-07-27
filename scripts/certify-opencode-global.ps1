@@ -654,14 +654,14 @@ try {
   Write-Host "  [OK] JSON valid with all required fields"
 
   Write-Host ""
-  Write-Host "[PHASE 7] Verifying exactly 8 public commands..."
+  Write-Host "[PHASE 7] Verifying exactly 11 public commands..."
   $commandsDir = Join-Path $sandboxConfigDir "commands"
   if (-not (Test-Path -LiteralPath $commandsDir)) {
     Write-Error "Commands directory not found"
     exit 1
   }
   $installedCommands = Get-ChildItem -LiteralPath $commandsDir -File | ForEach-Object { $_.Name }
-  $expectedCommands = @("go.md", "chatgpt-plus.md", "mix.md", "minimax-plus.md", "cross-session.md", "init-ai-env.md", "doctor-ai-env.md", "update-ai-env.md")
+  $expectedCommands = @("go.md", "chatgpt-plus.md", "mix.md", "minimax-plus.md", "cross-session.md", "init-ai-env.md", "doctor-ai-env.md", "update-ai-env.md", "ownership-inspect.md", "update-apply.md", "update-rollback.md")
   $extraCommands = $installedCommands | Where-Object { $_ -notin $expectedCommands }
   $missingCommands = $expectedCommands | Where-Object { $_ -notin $installedCommands }
   if ($extraCommands.Count -gt 0) {
@@ -672,11 +672,11 @@ try {
     Write-Error "Missing commands: $($missingCommands -join ', ')"
     exit 1
   }
-  if ($installedCommands.Count -ne 8) {
-    Write-Error "Expected 8 commands, found $($installedCommands.Count)"
+  if ($installedCommands.Count -ne 11) {
+    Write-Error "Expected 11 commands, found $($installedCommands.Count)"
     exit 1
   }
-  Write-Host "  [OK] Exactly 8 public commands verified"
+  Write-Host "  [OK] Exactly 11 public commands verified"
 
   Write-Host ""
   Write-Host "[PHASE 8] Running doctor on various scenarios..."
@@ -820,13 +820,16 @@ try {
   $isolatedWorkDir = Join-Path $sandboxBase "isolated-work-$(Get-Random)"
   $savedHome = $env:HOME
   $savedUserProfile = $env:USERPROFILE
+  $savedConfigDir = $env:OPENCODE_CONFIG_DIR
+  $savedSourceRoot = $env:OPENCODE_SOURCE_ROOT
+  $savedRepoRoot = $env:OPENCODE_REPO_ROOT
   try {
     New-Item -ItemType Directory -Path $isolatedHome -Force | Out-Null
     New-Item -ItemType Directory -Path $isolatedWorkDir -Force | Out-Null
     $env:HOME = $isolatedHome
     $env:USERPROFILE = $isolatedHome
-    $env:OPENCODE_REPO_ROOT = $null
-    $env:OPENCODE_REPO_ROOT = $null
+    Remove-Item -Path "env:OPENCODE_CONFIG_DIR" -ErrorAction SilentlyContinue
+    Remove-Item -Path "env:OPENCODE_SOURCE_ROOT" -ErrorAction SilentlyContinue
     Remove-Item -Path "env:OPENCODE_REPO_ROOT" -ErrorAction SilentlyContinue
     $installScript = Join-Path $RepoRoot "scripts\install-opencode-global.ps1"
     Write-Host "  Installing to isolated HOME: $isolatedHome"
@@ -917,6 +920,9 @@ try {
     }
     $env:HOME = $savedHome
     $env:USERPROFILE = $savedUserProfile
+    if ($null -ne $savedConfigDir) { $env:OPENCODE_CONFIG_DIR = $savedConfigDir } else { Remove-Item -Path "env:OPENCODE_CONFIG_DIR" -ErrorAction SilentlyContinue }
+    if ($null -ne $savedSourceRoot) { $env:OPENCODE_SOURCE_ROOT = $savedSourceRoot } else { Remove-Item -Path "env:OPENCODE_SOURCE_ROOT" -ErrorAction SilentlyContinue }
+    if ($null -ne $savedRepoRoot) { $env:OPENCODE_REPO_ROOT = $savedRepoRoot } else { Remove-Item -Path "env:OPENCODE_REPO_ROOT" -ErrorAction SilentlyContinue }
   }
 
   # ============================================================
@@ -1214,6 +1220,15 @@ if (!allOk) {
 
   Write-Host ""
   Write-Host "=============================="
+  Write-Host "[v0.6 Gate] Ownership engine distribution and wrapper security..."
+  $v060Files = @("bin/updates/update-cli.mjs", "bin/updates/path-safety.mjs", "bin/updates/backup-manager.mjs", "bin/updates/apply-executor.mjs", "bin/updates/rollback-controller.mjs", "bin/updates/journal-writer.mjs", "scripts/ownership-update.ps1")
+  foreach ($rel in $v060Files) {
+    $path = Join-Path $sandboxConfigDir $rel
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { Write-Error "Missing v0.6 runtime artifact: $rel"; exit 1 }
+  }
+  $ownershipWrapper = Get-Content -LiteralPath (Join-Path $sandboxConfigDir "scripts/ownership-update.ps1") -Raw
+  if ($ownershipWrapper -match "Invoke-Expression" -or $ownershipWrapper -notmatch "List\[string\]") { Write-Error "Unsafe ownership wrapper"; exit 1 }
+  Write-Host "  [OK] v0.6 ownership engine is installed and wrapper is array-invoked"
   Write-Host "CERTIFICATION PASSED" -ForegroundColor Green
   Write-Host ""
   exit 0

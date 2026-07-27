@@ -34,7 +34,12 @@
       "patternProperties": {
         "^[a-z_]+$": {
           "type": "object",
-          "required": ["description", "entries"],
+          "required": ["description"],
+          "anyOf": [
+            { "required": ["entries"] },
+            { "required": ["recursive_trees"] },
+            { "required": ["recursive", "source_prefix", "runtime_prefix", "include_patterns"] }
+          ],
           "properties": {
             "description": { "type": "string" },
             "source_prefix": { "type": "string" },
@@ -69,7 +74,7 @@
                 }
               }
             },
-            "recursive": { "type": "boolean" },
+            "recursive": { "const": true },
             "include_patterns": {
               "type": "array",
               "items": { "type": "string" }

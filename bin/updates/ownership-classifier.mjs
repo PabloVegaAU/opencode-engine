@@ -5,8 +5,8 @@
  * ownership policy rules, producing a classification map.
  */
 
-import { readFileSync, existsSync, readdirSync } from 'node:fs';
-import { join, relative, posix } from 'node:path';
+import { readFileSync, existsSync, readdirSync, lstatSync } from 'node:fs';
+import { join, relative, posix, isAbsolute, resolve } from 'node:path';
 
 /**
  * Valid ownership categories
@@ -35,7 +35,9 @@ function scanDirectory(dirPath, rootPath) {
       const fullPath = join(dirPath, entry.name);
 
       try {
-        if (entry.isDirectory()) {
+        if (entry.isSymbolicLink() || (lstatSync(fullPath).isReparsePoint && lstatSync(fullPath).isReparsePoint())) {
+          continue;
+        } else if (entry.isDirectory()) {
           const childFiles = scanDirectory(fullPath, rootPath);
           files.push(...childFiles);
         } else if (entry.isFile()) {

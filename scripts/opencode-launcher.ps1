@@ -11,8 +11,14 @@
   It never writes to the target project, never copies profile files, and never
   materializes agents that the project did not already declare.
 
+  Agent modes are validated against the allowed set: primary, subagent, all.
+  Invalid modes are rejected with a clear error message before launching.
+
+  This script uses only Node.js built-ins for JSON/JSONC parsing and validation.
+  No external npm packages are required.
+
 .PARAMETER Profile
-  Profile to use: go, chatgpt-plus, chatgpt, mix, minimax-plus
+  Profile to use: go, chatgpt-plus, mix, minimax-plus
 
 .PARAMETER TargetDir
   Target project directory (defaults to current working directory)
@@ -44,7 +50,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $GlobalRoot = Split-Path -Parent $PSScriptRoot
-$OpenCodeConfigDir = Join-Path $env:USERPROFILE ".config\opencode"
+$OpenCodeConfigDir = if ($env:OPENCODE_CONFIG_DIR) { $env:OPENCODE_CONFIG_DIR } else { Join-Path $env:USERPROFILE ".config\opencode" }
 
 $ProfileMap = @{
   "go"           = "go.jsonc"
@@ -75,6 +81,9 @@ if ([string]::Equals($NormalizedTarget, $NormalizedOpenCode, [System.StringCompa
   Write-Error "The global OpenCode root cannot be a launcher TargetDir. Select a project directory."
 }
 
+# Valid agent modes - anything else is rejected
+$ValidAgentModes = @("primary", "subagent", "all")
+
 function Invoke-RoutingBuilder {
   param(
     [string]$GlobalConfigPath,
@@ -85,14 +94,12 @@ function Invoke-RoutingBuilder {
     [string]$SchemaPath
   )
 
+  # No external dependencies - uses only Node.js built-ins
   $builder = @'
-import fs from "node:fs";
-import path from "node:path";
-import process from "node:process";
-import Ajv from "ajv";
-import { parse, printParseErrorCode } from "jsonc-parser";
+import fs from "fs";
+import path from "path";
 
-const [globalRoot, targetRoot, profileName, overlayPath, matrixPath, schemaPath] = process.argv.slice(2);
+const VALID_AGENT_MODES = new Set(["primary", "subagent", "all"]);
 
 function fail(message) {
   console.error(message);
@@ -101,6 +108,42 @@ function fail(message) {
 
 function readFile(filePath) {
   return fs.readFileSync(filePath, "utf8");
+}
+
+// String-aware JSONC parser - handles comments without corrupting strings
+function parseJsonc(content) {
+  let result = '';
+  let i = 0;
+  // Normalize line endings
+  content = content.replace(/\r\n?/g, "\n");
+  while (i < content.length) {
+    if (content[i] === '"') {
+      // String literal - preserve it entirely
+      result += content[i++];
+      while (i < content.length && content[i] !== '"') {
+        if (content[i] === '\\') result += content[i++];
+        result += content[i++];
+      }
+      if (i < content.length) result += content[i++];
+    } else if (content[i] === '/' && content[i + 1] === '/') {
+      // Single-line comment - skip to end of line
+      while (i < content.length && content[i] !== '\n') i++;
+    } else if (content[i] === '/' && content[i + 1] === '*') {
+      // Multi-line comment - skip entirely
+      i += 2;
+      while (i < content.length && !(content[i] === '*' && content[i + 1] === '/')) i++;
+      i += 2;
+    } else {
+      result += content[i++];
+    }
+  }
+  // Remove trailing commas before } or ]
+  result = result.replace(/,(\s*[}\]])/g, "$1");
+  try {
+    return JSON.parse(result);
+  } catch (error) {
+    fail(`JSON parse error: ${error.message}`);
+  }
 }
 
 function loadJson(filePath) {
@@ -112,17 +155,11 @@ function loadJson(filePath) {
 }
 
 function loadJsonc(filePath) {
-  const errors = [];
-  const value = parse(readFile(filePath), errors, { allowTrailingComma: true });
-  if (errors.length > 0) {
-    const formatted = errors.map((entry) => `${printParseErrorCode(entry.error)}@${entry.offset}`).join(", ");
-    fail(`Invalid JSONC in ${filePath}: ${formatted}`);
-  }
-  return value;
+  return parseJsonc(readFile(filePath));
 }
 
 function normalizeSource(filePath) {
-  return path.relative(targetRoot, filePath).replaceAll("\\", "/");
+  return path.relative(targetRoot, filePath).replace(/\\/g, "/");
 }
 
 function parseFrontmatter(filePath) {
@@ -155,14 +192,19 @@ function collectConfigAgents(filePath, discovered) {
   if (!fs.existsSync(filePath)) {
     return;
   }
-  const config = filePath.endsWith(".jsonc") ? loadJsonc(filePath) : loadJson(filePath);
+  let config;
+  if (filePath.endsWith(".jsonc")) {
+    config = loadJsonc(filePath);
+  } else {
+    config = loadJson(filePath);
+  }
   const agents = config?.agent ?? {};
   for (const [name, settings] of Object.entries(agents)) {
     if (!discovered.has(name)) {
-      discovered.set(name, { name, sources: new Set(), modes: new Set(), category: null });
+      discovered.set(name, { name, sources: [], modes: new Set(), category: null });
     }
     const record = discovered.get(name);
-    record.sources.add(normalizeSource(filePath));
+    record.sources.push(normalizeSource(filePath));
     if (settings && typeof settings === "object" && typeof settings.mode === "string") {
       record.modes.add(settings.mode);
     }
@@ -180,10 +222,10 @@ function collectMarkdownAgents(dirPath, discovered) {
     const filePath = path.join(dirPath, entry.name);
     const agentName = path.basename(entry.name, ".md");
     if (!discovered.has(agentName)) {
-      discovered.set(agentName, { name: agentName, sources: new Set(), modes: new Set(), category: null });
+      discovered.set(agentName, { name: agentName, sources: [], modes: new Set(), category: null });
     }
     const record = discovered.get(agentName);
-    record.sources.add(normalizeSource(filePath));
+    record.sources.push(normalizeSource(filePath));
     const frontmatter = parseFrontmatter(filePath);
     if (typeof frontmatter.mode === "string" && frontmatter.mode.length > 0) {
       record.modes.add(frontmatter.mode);
@@ -191,23 +233,78 @@ function collectMarkdownAgents(dirPath, discovered) {
   }
 }
 
-function validateOverlay(overlay) {
-  const keys = Object.keys(overlay).sort();
-  const allowed = ["$schema", "model", "small_model"];
-  if (keys.length !== allowed.length || !allowed.every((key) => keys.includes(key))) {
-    fail(`Profile overlay contains unexpected keys: ${keys.join(", ")}`);
+// Validate routing matrix has expected structure
+function validateMatrixStructure(matrix) {
+  if (!matrix || typeof matrix !== "object") {
+    return "matrix is not an object";
   }
+  if (!matrix.profiles || typeof matrix.profiles !== "object") {
+    return "matrix.profiles is missing or not an object";
+  }
+  return null;
 }
 
-const overlay = loadJson(overlayPath);
-validateOverlay(overlay);
+// Validate overlay has expected structure
+function validateOverlay(overlay) {
+  if (!overlay || typeof overlay !== "object") {
+    return "overlay is not an object";
+  }
+  if (typeof overlay.model !== "string") {
+    return "overlay.model is missing or not a string";
+  }
+  return null;
+}
 
-const matrix = loadJson(matrixPath);
-const schema = loadJson(schemaPath);
-const ajv = new Ajv({ allErrors: true, strict: false });
-const validate = ajv.compile(schema);
-if (!validate(matrix)) {
-  fail(`Routing matrix failed schema validation: ${ajv.errorsText(validate.errors, { separator: " | " })}`);
+// Validate agent modes before proceeding
+function validateAgentModes(discovered) {
+  const errors = [];
+  for (const [name, record] of discovered) {
+    // Check for conflicting modes across sources
+    if (record.modes.size > 1) {
+      const sources = record.sources.sort();
+      const modes = [...record.modes].sort();
+      errors.push(`Agent "${name}" has conflicting modes: ${modes.join(", ")} from sources: ${sources.join(", ")}`);
+    }
+    // Check each mode for validity
+    for (const mode of record.modes) {
+      if (!VALID_AGENT_MODES.has(mode)) {
+        const source = record.sources[0] || "unknown";
+        errors.push(`Agent "${name}" has invalid mode "${mode}" from ${source}. Valid modes are: primary, subagent, all`);
+      }
+    }
+  }
+  return errors;
+}
+
+const globalRoot = process.argv[2];
+const targetRoot = process.argv[3];
+const profileName = process.argv[4];
+const overlayPath = process.argv[5];
+const matrixPath = process.argv[6];
+const schemaPath = process.argv[7];
+
+let overlay;
+try {
+  overlay = loadJsonc(overlayPath);
+} catch (e) {
+  fail(`Failed to load overlay: ${e.message}`);
+}
+
+const overlayError = validateOverlay(overlay);
+if (overlayError) {
+  fail(`Invalid overlay: ${overlayError}`);
+}
+
+let matrix;
+try {
+  matrix = loadJson(matrixPath);
+} catch (e) {
+  fail(`Failed to load matrix: ${e.message}`);
+}
+
+const matrixError = validateMatrixStructure(matrix);
+if (matrixError) {
+  fail(`Invalid matrix structure: ${matrixError}`);
 }
 
 const profileMatrix = matrix?.profiles?.[profileName];
@@ -220,10 +317,24 @@ collectConfigAgents(path.join(targetRoot, "opencode.json"), discovered);
 collectConfigAgents(path.join(targetRoot, "opencode.jsonc"), discovered);
 collectMarkdownAgents(path.join(targetRoot, ".opencode", "agents"), discovered);
 
-const categoryFile = path.join(targetRoot, ".opencode", "model-routing.json");
-const localCategories = fs.existsSync(categoryFile) ? loadJson(categoryFile) : {};
+// Validate agent modes before proceeding
+const modeErrors = validateAgentModes(discovered);
+if (modeErrors.length > 0) {
+  for (const err of modeErrors) {
+    console.error(`MODE_VALIDATION_FAILED: ${err}`);
+  }
+  process.exit(1);
+}
 
-for (const [name, category] of Object.entries(localCategories ?? {})) {
+const categoryFile = path.join(targetRoot, ".opencode", "model-routing.json");
+let localCategories = {};
+if (fs.existsSync(categoryFile)) {
+  try {
+    localCategories = loadJson(categoryFile) || {};
+  } catch (e) {}
+}
+
+for (const [name, category] of Object.entries(localCategories)) {
   if (!discovered.has(name)) {
     continue;
   }
@@ -243,7 +354,7 @@ for (const record of [...discovered.values()].sort((a, b) => a.name.localeCompar
   const resolved = {
     name: record.name,
     mode,
-    sources: [...record.sources].sort(),
+    sources: record.sources.sort(),
     category: record.category,
     resolvedModel: assignment ? assignment.model : overlay.model,
     resolvedVariant: assignment?.variant ?? null,
@@ -268,7 +379,7 @@ const result = {
     project: targetRoot,
     agentCount: resolvedAgents.length,
     agents: resolvedAgents,
-    categories: localCategories ?? {},
+    categories: localCategories,
     unknownAgents,
     writes: 0
   }

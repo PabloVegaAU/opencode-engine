@@ -1034,17 +1034,41 @@ if (Test-Path -LiteralPath $validatorPath) {
   $issues++
 }
 
-# --- Check 7: Validator parity via generate-retrieval-validators.mjs --check ---
+# --- Check 7: Validator parity in source; packaged syntax in installed runtime ---
 Write-Host ""
 Write-Host "[16b] Checking validator parity..."
-$validatorCheckResult = & node (Join-Path $RepoRoot "scripts\generate-retrieval-validators.mjs") --check 2>&1
-$validatorParityOk = $LASTEXITCODE -eq 0
-if ($validatorParityOk) {
-  Write-Host "  [OK] Validators match canonical SHA256"
+$generatorPath = Join-Path $RepoRoot "scripts\generate-retrieval-validators.mjs"
+$sourceLayoutPresent = (Test-Path -LiteralPath $generatorPath -PathType Leaf) -and (Test-Path -LiteralPath (Join-Path $RepoRoot "global\opencode.jsonc") -PathType Leaf)
+$nodeForValidator = Get-Command node -ErrorAction SilentlyContinue
+$validatorParityOk = $true
+if ($sourceLayoutPresent -and $nodeForValidator) {
+  $validatorCheckResult = & node $generatorPath --check 2>&1
+  $validatorParityOk = $LASTEXITCODE -eq 0
+  if ($validatorParityOk) {
+    Write-Host "  [OK] Source validator parity confirmed"
+  } else {
+    Write-Host "  [DRIFT] Validator drift detected"
+    Write-Host "  Details: $validatorCheckResult"
+    $issues++
+  }
 } else {
-  Write-Host "  [DRIFT] Validator drift detected"
-  Write-Host "  Details: $validatorCheckResult"
-  $issues++
+  $validatorSyntaxOk = $true
+  foreach ($packagedValidator in @("bin\retrieval\retrieval-policy-validator.mjs", "bin\retrieval\retrieval-index-state-validator.mjs")) {
+    $packagedPath = Join-Path $RepoRoot $packagedValidator
+    if (-not $nodeForValidator -or -not (Test-Path -LiteralPath $packagedPath -PathType Leaf)) {
+      $validatorSyntaxOk = $false
+      continue
+    }
+    & node --check $packagedPath 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) { $validatorSyntaxOk = $false }
+  }
+  $validatorParityOk = $validatorSyntaxOk
+  if ($validatorSyntaxOk) {
+    Write-Host "  [N/A/PACKAGED] Source generator unavailable; versioned validators exist and pass syntax checks"
+  } else {
+    Write-Host "  [MISSING/INVALID] Packaged validators are unavailable or invalid"
+    $issues++
+  }
 }
 
 # --- Check 8: Node.js detection (native, no shell) ---

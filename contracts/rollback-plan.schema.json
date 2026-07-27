@@ -33,7 +33,7 @@
     "rollbackOperation": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["type", "path", "backup_ref"],
+      "required": ["type", "path"],
       "properties": {
         "type": {
           "type": "string",
@@ -44,8 +44,7 @@
           "minLength": 1
         },
         "backup_ref": {
-          "type": "string",
-          "minLength": 1
+          "type": ["string", "null"]
         }
       }
     }

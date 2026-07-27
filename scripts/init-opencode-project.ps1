@@ -1,40 +1,47 @@
 <#
 .SYNOPSIS
-  Initializes only the reusable OpenCode runtime shell for a project.
+  Initializes a project with the OpenCode runtime shell.
 
 .DESCRIPTION
-  The default operation creates a minimal opencode.json that inherits the
-  global model and security defaults. Agents, prompts, technologies, MCP,
-  skills, Speckit, README, AGENTS and node_modules are never copied.
+  Creates a minimal opencode.json that inherits global defaults. This is the
+  official project initializer for OpenCode AI environments.
 
-  Optional switches add only generic intelligence contracts/artifacts or the
-  three profile launcher commands. Existing files are skipped unless -Force is
-  explicitly supplied.
+  **IMPORTANT:**
+  - AGENTS.md is NOT created by this script. Use /init for AGENTS.md.
+  - Custom agents, MCP, skills, and Speckit are never created.
+  - Bootstrap manifest is only created if -IncludeBootstrapManifest is passed.
+
+  Optional switches add neutral intelligence artifacts, contract schemas,
+  profile commands, or retrieval policy. Existing files are skipped unless
+  -Force is explicitly supplied.
+
+  The initializer is idempotent - it will not overwrite existing files.
 
 .PARAMETER ProjectPath
-  Target project directory path
+  Target project directory path (defaults to current working directory)
 
 .PARAMETER IncludeIntelligence
-  Include neutral intelligence structure
+  Include neutral intelligence structure (.intelligence/)
 
 .PARAMETER IncludeContracts
-  Include contract schemas
+  Include contract schemas (contracts/)
 
 .PARAMETER IncludeProfileCommands
-  Include go, chatgpt, and mix commands
+  Include go, chatgpt-plus, mix, minimax-plus commands in .opencode/commands/
 
 .PARAMETER IncludeBootstrapManifest
-  Generate bootstrap manifest
+  Generate .opencode/bootstrap-manifest.json recording what was initialized
 
 .PARAMETER IncludeRetrievalPolicy
   Include neutral retrieval policy template in .ai-env/retrieval-policy.json
 
 .PARAMETER Force
-  Overwrite existing files
+  Overwrite existing files (except AGENTS.md which is never touched)
 
 .EXAMPLE
-  .\init-opencode-project.ps1 -ProjectPath C:\nuevo-proyecto
+  .\init-opencode-project.ps1 -ProjectPath C:\mi-proyecto
   .\init-opencode-project.ps1 C:\mi-proyecto -IncludeIntelligence -IncludeContracts
+  .\init-opencode-project.ps1 -IncludeBootstrapManifest -Force
 #>
 [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = "Medium")]
 param(
@@ -52,7 +59,7 @@ param(
 $ErrorActionPreference = "Stop"
 $GlobalRoot = Split-Path -Parent $PSScriptRoot
 $TargetRoot = [System.IO.Path]::GetFullPath($ProjectPath)
-$OpenCodeConfigDir = Join-Path $env:USERPROFILE ".config\opencode"
+$OpenCodeConfigDir = if ($env:OPENCODE_CONFIG_DIR) { $env:OPENCODE_CONFIG_DIR } else { Join-Path $env:USERPROFILE ".config\opencode" }
 $BootstrapSchemaVersion = '2.0.0'
 $BootstrapVersion = '1.0.0'
 
@@ -137,11 +144,18 @@ if (-not (Test-Path -LiteralPath $TargetRoot -PathType Container)) {
 }
 
 $isGitRoot = Test-Path (Join-Path $TargetRoot ".git")
-Write-Host "Git repository: $(if ($isGitRoot) { 'yes' } else { 'no (will not create AGENTS.md)' })"
+Write-Host "Git repository: $(if ($isGitRoot) { 'yes' } else { 'no' })"
+Write-Host ""
+
+# NOTE: AGENTS.md is NOT created by this script.
+# Use /init (the official OpenCode command) to create or improve AGENTS.md.
+Write-Host "[INFO] AGENTS.md is NOT created by this script."
+Write-Host "       Use /init (the official OpenCode command) for AGENTS.md creation."
 Write-Host ""
 
 $managedArtifacts = [System.Collections.Generic.List[object]]::new()
 
+# Create minimal opencode.json (not opencode.jsonc - we want clean JSON)
 $minimalConfig = [ordered]@{
   '$schema' = 'https://opencode.ai/config.json'
 } | ConvertTo-Json -Depth 4
@@ -173,40 +187,8 @@ if ($opencodeJsonExisted -or $opencodeJsoncExisted) {
   })
 }
 
-if ($isGitRoot) {
-  $agentsSource = Join-Path $GlobalRoot "templates\project-neutral\AGENTS.md"
-  if (Test-Path -LiteralPath $agentsSource) {
-    $agentsExisted = Test-Path -LiteralPath (Join-Path $TargetRoot "AGENTS.md")
-    $agentsChecksum = if (-not $agentsExisted) { Get-FileSha256Lower -Path $agentsSource } else { $null }
-    $managedArtifacts.Add([ordered]@{
-      relative_path = 'AGENTS.md'
-      artifact_type = 'manifest'
-      source = 'global:AGENTS.md'
-      include_checksum = $true
-      existed_before = $agentsExisted
-      expected_checksum = $agentsChecksum
-      create_state = if ($agentsExisted) { 'skipped' } else { 'copied' }
-    })
-    Copy-GenericFile -Source $agentsSource -RelativePath 'AGENTS.md'
-  }
-
-  $bootstrapManifestSource = Join-Path $GlobalRoot "templates\project-neutral\project-manifest.json"
-  if (Test-Path -LiteralPath $bootstrapManifestSource) {
-    $bootstrapManifestDest = Join-Path $TargetRoot ".opencode\bootstrap-manifest.json"
-    $bootstrapManifestExisted = Test-Path -LiteralPath $bootstrapManifestDest
-    $bootstrapManifestChecksum = if (-not $bootstrapManifestExisted) { Get-FileSha256Lower -Path $bootstrapManifestSource } else { $null }
-    $managedArtifacts.Add([ordered]@{
-      relative_path = '.opencode/bootstrap-manifest.json'
-      artifact_type = 'manifest'
-      source = 'global:project-manifest'
-      include_checksum = $true
-      existed_before = $bootstrapManifestExisted
-      expected_checksum = $bootstrapManifestChecksum
-      create_state = if ($bootstrapManifestExisted) { 'skipped' } else { 'copied' }
-    })
-    Copy-GenericFile -Source $bootstrapManifestSource -RelativePath '.opencode\bootstrap-manifest.json'
-  }
-}
+# NOTE: Bootstrap manifest is only created if explicitly requested via -IncludeBootstrapManifest
+# This is handled at the end of the script, after all other artifacts are processed
 
 if ($IncludeIntelligence) {
   $generatedAt = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
@@ -344,6 +326,7 @@ if ($IncludeRetrievalPolicy) {
     $retrievalPolicyInLedger = $false
     $ledgerChecksum = $null
 
+    # Check if bootstrap manifest exists and has this file in ledger
     if (Test-Path -LiteralPath $bootstrapManifestPath) {
       try {
         $existingManifest = Get-Content $bootstrapManifestPath -Raw | ConvertFrom-Json
@@ -351,7 +334,12 @@ if ($IncludeRetrievalPolicy) {
           if ($artifact.path -eq '.ai-env/retrieval-policy.json' -and $artifact.artifact_type -eq 'config') {
             $alreadyAdopted = $true
             $retrievalPolicyInLedger = $true
-            $ledgerChecksum = $artifact.checksum_sha256
+            # Record the ACTUAL existing checksum from ledger, not a new one
+            $ledgerChecksum = if ($artifact.PSObject.Properties.Name -contains 'checksum_sha256') {
+              $artifact.checksum_sha256
+            } else {
+              $null
+            }
             break
           }
         }
@@ -359,8 +347,9 @@ if ($IncludeRetrievalPolicy) {
     }
 
     if ($alreadyAdopted -and $retrievalPolicyInLedger) {
+      # Retrieval policy is already in the ledger
       if ($ledgerChecksum -eq $retrievalPolicyChecksum) {
-        Write-Host "[skip] Retrieval policy already adopted (checksum match)"
+        Write-Host "[skip] Retrieval policy already adopted (checksum matches ledger)"
         $managedArtifacts.Add([ordered]@{
           relative_path = $retrievalPolicyRelativePath
           artifact_type = 'config'
@@ -368,13 +357,15 @@ if ($IncludeRetrievalPolicy) {
           include_checksum = $true
           existed_before = $true
           expected_checksum = $retrievalPolicyChecksum
+          ledger_checksum = $ledgerChecksum
           create_state = 'already_adopted'
         })
       } else {
+        # Checksum differs - do not overwrite without Force
         Write-Host "[warn] Retrieval policy already adopted but checksum differs from template"
-        Write-Host "       Existing ledger checksum: $ledgerChecksum"
+        Write-Host "       Ledger checksum: $ledgerChecksum"
         Write-Host "       Template checksum: $retrievalPolicyChecksum"
-        Write-Host "       Not overwriting existing policy. Use -Force to override."
+        Write-Host "       Not overwriting. Use -Force to override."
         $managedArtifacts.Add([ordered]@{
           relative_path = $retrievalPolicyRelativePath
           artifact_type = 'config'
@@ -382,22 +373,27 @@ if ($IncludeRetrievalPolicy) {
           include_checksum = $true
           existed_before = $true
           expected_checksum = $retrievalPolicyChecksum
+          ledger_checksum = $ledgerChecksum
           create_state = 'divergent'
         })
       }
     } elseif ($retrievalPolicyExisted -and -not $alreadyAdopted) {
-      Write-Host "[warn] Retrieval policy file exists but not in ledger - adding to ledger"
+      # File exists but not in ledger - adopt it but record existing checksum
+      $existingChecksum = Get-FileSha256Lower -Path $retrievalPolicyDest
+      Write-Host "[warn] Retrieval policy file exists but not in ledger - adopting with existing checksum"
       $managedArtifacts.Add([ordered]@{
         relative_path = $retrievalPolicyRelativePath
         artifact_type = 'config'
         source = 'global:retrieval-policy'
         include_checksum = $true
         existed_before = $true
+        existing_checksum = $existingChecksum
         expected_checksum = $retrievalPolicyChecksum
         create_state = 'adopting_existing'
       })
-      Copy-GenericFile -Source $retrievalPolicySource -RelativePath $retrievalPolicyRelativePath
+      # Don't copy over existing file - just record it
     } else {
+      # First time adoption
       Write-Host "[info] Adopting retrieval policy for the first time"
       $managedArtifacts.Add([ordered]@{
         relative_path = $retrievalPolicyRelativePath
@@ -408,11 +404,14 @@ if ($IncludeRetrievalPolicy) {
         expected_checksum = $retrievalPolicyChecksum
         create_state = if ($retrievalPolicyExisted) { 'skipped' } else { 'copied' }
       })
-      Copy-GenericFile -Source $retrievalPolicySource -RelativePath $retrievalPolicyRelativePath
+      if (-not $retrievalPolicyExisted) {
+        Copy-GenericFile -Source $retrievalPolicySource -RelativePath $retrievalPolicyRelativePath
+      }
     }
   }
 }
 
+# Bootstrap manifest is ONLY created if -IncludeBootstrapManifest was explicitly passed
 if ($IncludeBootstrapManifest) {
   $bootstrapManifestPath = '.opencode\bootstrap-manifest.json'
   $bootstrapManifestDest = Join-Path $TargetRoot $bootstrapManifestPath
@@ -432,6 +431,14 @@ if ($IncludeBootstrapManifest) {
     }
     if ($artifact.include_checksum -and $artifact.expected_checksum) {
       $artifactEntry['checksum_sha256'] = $artifact.expected_checksum
+    }
+    # Include existing_checksum for adopted files
+    if ($artifact.existing_checksum) {
+      $artifactEntry['existing_checksum_sha256'] = $artifact.existing_checksum
+    }
+    # Include ledger_checksum for already-adopted files
+    if ($artifact.ledger_checksum) {
+      $artifactEntry['ledger_checksum_sha256'] = $artifact.ledger_checksum
     }
     $artifactsList += $artifactEntry
   }
@@ -456,7 +463,7 @@ if ($IncludeBootstrapManifest) {
   } | ConvertTo-Json -Depth 10
 
   if ($bootstrapManifestExisted -and -not $Force) {
-    Write-Host "[skip] $bootstrapManifestDest"
+    Write-Host "[skip] $bootstrapManifestDest (exists, use -Force to overwrite)"
   } else {
     if ($PSCmdlet.ShouldProcess($bootstrapManifestDest, "write bootstrap manifest")) {
       $parent = Split-Path -Parent $bootstrapManifestDest
@@ -467,6 +474,8 @@ if ($IncludeBootstrapManifest) {
       Write-Host "[write] $bootstrapManifestDest"
     }
   }
+} else {
+  Write-Host "[INFO] Bootstrap manifest not created (use -IncludeBootstrapManifest to generate)"
 }
 
 Write-Host ""
@@ -476,5 +485,6 @@ Write-Host "Next steps:"
 if (-not $isGitRoot) {
   Write-Host "  1. Initialize git: git init"
 }
-Write-Host "  2. Use opencode-launcher.ps1 to start with a profile"
+Write-Host "  2. Use /init to create or improve AGENTS.md (not done by this script)"
+Write-Host "  3. Use opencode-launcher.ps1 to start with a profile:"
 Write-Host "     .\opencode-launcher.ps1 -Profile go -TargetDir `"$TargetRoot`""

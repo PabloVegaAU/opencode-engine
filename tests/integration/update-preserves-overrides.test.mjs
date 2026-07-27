@@ -78,20 +78,22 @@ describe('update-preserves-overrides', () => {
     assert.ok(!afterUpdateContent.includes('<!-- ANOTHER MOD -->'),
       'Update should overwrite local modification');
 
-    const backupFiles = [];
-    const searchDir = (dir) => {
-      if (!fs.existsSync(dir)) return;
-      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-        const fullPath = path.join(dir, entry.name);
-        if (entry.isDirectory()) {
-          searchDir(fullPath);
-        } else if (entry.name.includes('.bak-')) {
-          backupFiles.push(fullPath);
+    // Check for backup in centralized location: runtime/backups/managed/<timestamp>/
+    const backupsRoot = path.join(configDir, 'runtime', 'backups', 'managed');
+    let foundBackup = false;
+    if (fs.existsSync(backupsRoot)) {
+      const timestampDirs = fs.readdirSync(backupsRoot);
+      for (const tsDir of timestampDirs) {
+        const backupPath = path.join(backupsRoot, tsDir, 'AGENTS.md');
+        if (fs.existsSync(backupPath)) {
+          const backupContent = fs.readFileSync(backupPath, 'utf8');
+          if (backupContent.includes('<!-- ANOTHER MOD -->')) {
+            foundBackup = true;
+            break;
+          }
         }
       }
-    };
-    searchDir(configDir);
-
-    assert.ok(backupFiles.length > 0, 'Should find backup file');
+    }
+    assert.ok(foundBackup, 'Should find backup in runtime/backups/managed/<timestamp>/');
   });
 });
