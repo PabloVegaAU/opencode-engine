@@ -1,0 +1,108 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "distribution/runtime-manifest.schema.json",
+  "title": "OpenCode Global Runtime Distribution Manifest",
+  "description": "Canonical manifest mapping source paths to runtime installation paths",
+  "type": "object",
+  "required": ["manifest_version", "categories", "install_requires"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "manifest_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "created": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "description": {
+      "type": "string"
+    },
+    "source_root": {
+      "type": "string"
+    },
+    "runtime_root": {
+      "type": "string"
+    },
+    "config_env_var": {
+      "type": "string"
+    },
+    "categories": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-z_]+$": {
+          "type": "object",
+          "required": ["description", "entries"],
+          "properties": {
+            "description": { "type": "string" },
+            "source_prefix": { "type": "string" },
+            "runtime_prefix": { "type": "string" },
+            "entries": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["source", "runtime"],
+                "properties": {
+                  "source": { "type": "string" },
+                  "runtime": { "type": "string" },
+                  "exclude": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  }
+                }
+              }
+            },
+            "recursive_trees": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["source", "runtime"],
+                "properties": {
+                  "source": { "type": "string" },
+                  "runtime": { "type": "string" },
+                  "exclude": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  }
+                }
+              }
+            },
+            "recursive": { "type": "boolean" },
+            "include_patterns": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "exclude_patterns": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "dev_only": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["source", "reason"],
+                "properties": {
+                  "source": { "type": "string" },
+                  "reason": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "install_requires": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "manifest_helper": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

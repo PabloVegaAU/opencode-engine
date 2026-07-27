@@ -1,0 +1,140 @@
+{
+  "$schema": "distribution/runtime-manifest.schema.json",
+  "manifest_version": "1.0.0",
+  "created": "2026-07-26T00:00:00Z",
+  "description": "Canonical OpenCode Global runtime distribution manifest. Maps source paths to runtime installation paths.",
+  "source_root": ".",
+  "runtime_root": "$env:USERPROFILE/.config/opencode",
+  "config_env_var": "OPENCODE_CONFIG_DIR",
+
+  "categories": {
+    "global_config": {
+      "description": "Global configuration, profiles, routing, and AGENTS",
+      "source_prefix": "global/",
+      "runtime_prefix": "",
+      "entries": [
+        { "source": "global/opencode.jsonc", "runtime": "opencode.jsonc" },
+        { "source": "global/protocols/AGENTS.global.md", "runtime": "AGENTS.md" }
+      ],
+      "recursive_trees": [
+        { "source": "global/opencode.profiles/", "runtime": "opencode.profiles/", "exclude": ["model-matrix.json", "model-matrix.schema.json"] },
+        { "source": "global/retrieval/", "runtime": "retrieval/" }
+      ]
+    },
+
+    "routing": {
+      "description": "Model routing matrix and schema",
+      "source_prefix": "global/opencode.profiles/",
+      "runtime_prefix": "routing/",
+      "entries": [
+        { "source": "global/opencode.profiles/model-matrix.json", "runtime": "routing/model-matrix.json" },
+        { "source": "global/opencode.profiles/model-matrix.schema.json", "runtime": "routing/model-matrix.schema.json" }
+      ]
+    },
+
+    "contracts": {
+      "description": "JSON schema contracts for validation",
+      "source_prefix": "contracts/",
+      "runtime_prefix": "contracts/",
+      "recursive": true,
+      "include_patterns": ["*.schema.json", "*.schema.jsonc"],
+      "exclude_patterns": []
+    },
+
+    "bin_retrieval": {
+      "description": "Retrieval system binaries and adapters",
+      "source_prefix": "bin/retrieval/",
+      "runtime_prefix": "bin/retrieval/",
+      "recursive": true,
+      "include_patterns": ["*.mjs"],
+      "exclude_patterns": []
+    },
+
+    "templates": {
+      "description": "Project-neutral templates for initialization",
+      "source_prefix": "templates/project-neutral/",
+      "runtime_prefix": "templates/project-neutral/",
+      "recursive": true,
+      "include_patterns": ["*"],
+      "exclude_patterns": []
+    },
+
+    "commands": {
+      "description": "Public command definitions (8 total)",
+      "source_prefix": "commands/",
+      "runtime_prefix": "commands/",
+      "entries": [
+        { "source": "commands/go.md", "runtime": "commands/go.md" },
+        { "source": "commands/chatgpt-plus.md", "runtime": "commands/chatgpt-plus.md" },
+        { "source": "commands/mix.md", "runtime": "commands/mix.md" },
+        { "source": "commands/minimax-plus.md", "runtime": "commands/minimax-plus.md" },
+        { "source": "commands/cross-session.md", "runtime": "commands/cross-session.md" },
+        { "source": "commands/init-ai-env.md", "runtime": "commands/init-ai-env.md" },
+        { "source": "commands/doctor-ai-env.md", "runtime": "commands/doctor-ai-env.md" },
+        { "source": "commands/update-ai-env.md", "runtime": "commands/update-ai-env.md" }
+      ]
+    },
+
+    "runtime_scripts": {
+      "description": "Runtime PowerShell scripts for lifecycle management",
+      "source_prefix": "scripts/",
+      "runtime_prefix": "scripts/",
+      "entries": [
+        { "source": "scripts/install-opencode-global.ps1", "runtime": "scripts/install-opencode-global.ps1" },
+        { "source": "scripts/update-opencode-global.ps1", "runtime": "scripts/update-opencode-global.ps1" },
+        { "source": "scripts/cleanup-runtime.ps1", "runtime": "scripts/cleanup-runtime.ps1" },
+        { "source": "scripts/init-opencode-project.ps1", "runtime": "scripts/init-opencode-project.ps1" },
+        { "source": "scripts/update-opencode-project.ps1", "runtime": "scripts/update-opencode-project.ps1" },
+        { "source": "scripts/doctor-opencode-global.ps1", "runtime": "scripts/doctor-opencode-global.ps1" },
+        { "source": "scripts/certify-opencode-global.ps1", "runtime": "scripts/certify-opencode-global.ps1" },
+        { "source": "scripts/opencode-launcher.ps1", "runtime": "scripts/opencode-launcher.ps1" },
+        { "source": "scripts/cross-session.ps1", "runtime": "scripts/cross-session.ps1" },
+        { "source": "scripts/retrieval-router.ps1", "runtime": "scripts/retrieval-router.ps1" },
+        { "source": "scripts/setup-retrieval-tools.ps1", "runtime": "scripts/setup-retrieval-tools.ps1" }
+      ],
+      "dev_only": [
+        { "source": "scripts/generate-retrieval-validators.mjs", "reason": "Development-only validator generator" },
+        { "source": "scripts/validate.mjs", "reason": "Development-only validation script" },
+        { "source": "scripts/discover-real-query-set.mjs", "reason": "Development-only query discovery" },
+        { "source": "scripts/run-retrieval-real-pilot.mjs", "reason": "Development-only pilot runner" }
+      ]
+    },
+
+    "distribution": {
+      "description": "Distribution manifest and resolver (installed to runtime for self-discovery)",
+      "source_prefix": "distribution/",
+      "runtime_prefix": "distribution/",
+      "entries": [
+        { "source": "distribution/runtime-manifest.json", "runtime": "distribution/runtime-manifest.json" },
+        { "source": "distribution/resolve-runtime-manifest.ps1", "runtime": "distribution/resolve-runtime-manifest.ps1" }
+      ]
+    }
+  },
+
+  "install_requires": [
+    "global/opencode.jsonc",
+    "global/protocols/AGENTS.global.md",
+    "global/opencode.profiles/model-matrix.json",
+    "global/opencode.profiles/model-matrix.schema.json",
+    "contracts/bootstrap-manifest.schema.json",
+    "contracts/manifest.schema.json",
+    "contracts/index.schema.json",
+    "contracts/graph.schema.json",
+    "contracts/session.schema.json",
+    "contracts/retrieval-policy.schema.json",
+    "contracts/retrieval-index-state.schema.json",
+    "commands/go.md",
+    "scripts/install-opencode-global.ps1",
+    "scripts/update-opencode-global.ps1",
+    "distribution/runtime-manifest.json",
+    "distribution/resolve-runtime-manifest.ps1"
+  ],
+
+  "notes": [
+    "Source is the sole distribution truth. Runtime is derived via install/update scripts.",
+    "Development-only scripts (generate-retrieval-validators.mjs, validate.mjs, discover-real-query-set.mjs, run-retrieval-real-pilot.mjs) are NOT installed to runtime.",
+    "cleanup-runtime.ps1 is temporary migration tooling and may be removed in future versions.",
+    "setup-retrieval-tools.ps1 remains as optional runtime utility.",
+    "Distribution files are installed to runtime/distribution/ for self-discovery by install/update scripts."
+  ]
+}
