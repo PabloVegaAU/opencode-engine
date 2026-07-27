@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.5.1] - 2026-07-27
+
+### Stabilization & Release Governance
+
+This release focuses on stabilization, governance, provenance, recovery, security, performance, and documentation improvements.
+
+**This release does NOT implement:**
+- Ownership Engine
+- Three-way merge
+- Capability routing
+- OpenCode V2
+- Any v0.6.0 features
+
+### Changes
+- Updated VERSION and package.json to 0.5.1
+- Added distribution manifest for source→runtime distribution
+- Updated lifecycle scripts (install, update, doctor, certify)
+- Improved .gitignore
+- All v0.5.1 gates pass (doctor: 0 issues, certify: phases 1-7 pass)
+
 ## [0.5.0] - 2026-07-26
 
 ### Phase 7 — Real-Pilot Gates (COMPLETED)

@@ -1,13 +1,13 @@
 # OpenCode Global - Build Progress
 
-## Status: V0.5.0_RUNTIME_DISTRIBUTED_AND_VALIDATED
+## Status: V0.5.1_CLOSED_CERTIFIED_DISTRIBUTED_V0.6.0_NOT_STARTED
 
 ## Current Location
 
 **Source Repository:** `C:\OpenCode\opencode-global-src`
 **Branch:** `main`
 **HEAD:** `796a187` (working tree clean at planning start)
-**Tag:** `v0.5.0` (2026-07-26)
+**Tag:** `v0.5.1` (2026-07-27)
 
 **Note:** This is the canonical source repository. Clone to any location for use.
 
@@ -540,16 +540,16 @@ C:\OpenCode\opencode-global-src\
 
 ## Version
 
-- OpenCode Global: **0.5.0** (released)
+- OpenCode Global: **0.5.1** (released)
 - Compatible with OpenCode: **1.18.x+**
 
 ## Final Release Verification (Phase 8)
 
-- [x] `VERSION` updated to 0.5.0
-- [x] `package.json` version updated to 0.5.0
-- [x] CHANGELOG converted to `[0.5.0] - 2026-07-26`
+- [x] `VERSION` updated to 0.5.1
+- [x] `package.json` version updated to 0.5.1
+- [x] CHANGELOG converted to `[0.5.1] - 2026-07-27`
 - [x] Working tree clean (`git status --porcelain` empty)
-- [x] Tag `v0.5.0` created (annotated)
+- [x] Tag `v0.5.1` created (annotated)
 - [x] Unit tests 379/379 pass
 - [x] Integration tests 171/171 pass
 - [x] Total 550/550 pass
@@ -561,6 +561,31 @@ C:\OpenCode\opencode-global-src\
 - [x] No secrets, credentials, absolute paths versioned
 - [x] No runtime, project, or foreign repository modified
 - [x] No push, fetch, pull, merge, rebase performed
+
+## v0.5.1 Closure Summary
+
+v0.5.1 represents a stable closure of the v0.5.x retrieval execution lifecycle. All phases (0-8) completed successfully with full certification. The retrieval execution engine is production-ready with:
+
+- **Phases 0-3:** Planning, adapters, engine, and router wiring completed and contract-validated
+- **Phase 5:** Doctor diagnostics implemented with retrieval tier reporting
+- **Phase 6:** Certification hardening with 8-gate validation
+- **Phase 7:** Real-world pilot against Quipusoft achieving 50% call/char/token reduction
+- **Phase 8:** Full release verification and distribution
+
+State: `V0.5.1_CLOSED_CERTIFIED_DISTRIBUTED`. All deliverables complete, certified, and distributed.
+
+## v0.6.0 Planning (NOT STARTED)
+
+v0.6.0 tasks are defined in `specs/` and are currently **NOT STARTED**:
+
+| Task | Description | Status |
+|------|-------------|--------|
+| T-001 | Project spec placeholder | NOT STARTED |
+| T-002 | Project spec placeholder | NOT STARTED |
+| ... | ... | ... |
+| T-028 | Project spec placeholder | NOT STARTED |
+
+All T-001 through T-028 tasks in `specs/` remain in NOT STARTED state pending v0.6.0 planning initiation.
 
 ## Security
 
