@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.6.0] - 2026-07-27
+
+### Ownership Engine Phase 1 (COMPLETED)
+
+This release implements the Ownership Engine for safe, atomic, auditable updates of adopted AI environments.
+
+**Implemented:**
+- Ownership classification for every artifact (global-managed, project-owned, global-managed-local-override, generated-runtime, external)
+- Deterministic update planning with explicit user approval gate
+- Atomic apply with full rollback on intermediate failure
+- Backup before any mutation
+- Recovery journal for audit and replay
+- Migration catalog for tracked schema/artifact migrations
+
+**Schemas:** ownership-policy, migration-catalog, update-plan, update-run, backup-manifest, rollback-plan
+**Core:** OwnershipClassifier, UpdatePlanner, BackupManager, ApplyExecutor, RollbackController, JournalWriter
+**CLI:** ownership-inspect, update-apply, update-rollback commands
+
+**This release does NOT implement:**
+- AI-driven conflict resolution (future phase)
+- Three-way merge (future phase)
+
 ## [0.5.1] - 2026-07-27
 
 ### Stabilization & Release Governance
