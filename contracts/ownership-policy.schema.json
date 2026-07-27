@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Ownership Policy Schema",
+  "description": "Neutral per-project ownership policy for OpenCode Global v0.5.0",
+  "type": "object",
+  "required": ["version", "rules", "default_category", "blocked_categories"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^1$",
+      "description": "Schema version must be 1"
+    },
+    "rules": {
+      "type": "array",
+      "description": "Path pattern matching rules for ownership categorization",
+      "items": {
+        "type": "object",
+        "required": ["path_pattern", "category", "allow_override", "migration_id_required"],
+        "additionalProperties": false,
+        "properties": {
+          "path_pattern": {
+            "type": "string",
+            "description": "Glob pattern for path matching"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "global-managed",
+              "project-owned",
+              "global-managed-local-override",
+              "generated-runtime",
+              "external"
+            ],
+            "description": "Ownership category for matched paths"
+          },
+          "allow_override": {
+            "type": "boolean",
+            "description": "Whether projects can override this rule"
+          },
+          "migration_id_required": {
+            "type": "boolean",
+            "description": "Whether a migration ID is required to change ownership"
+          }
+        }
+      }
+    },
+    "default_category": {
+      "type": "string",
+      "enum": ["project-owned"],
+      "default": "project-owned",
+      "description": "Default ownership category for unmatched paths"
+    },
+    "blocked_categories": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["external"]
+      },
+      "default": ["external"],
+      "description": "Categories that are blocked from being assigned"
+    }
+  }
+}

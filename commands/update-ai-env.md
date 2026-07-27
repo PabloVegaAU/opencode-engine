@@ -1,9 +1,9 @@
 ---
-description: Diagnose or plan AI environment updates (read-only in v0.4.0)
+description: Diagnose or plan AI environment updates (read-only)
 agent: build
 ---
 
-Diagnose project AI environment health or generate an update plan. v0.4.0 is STRICTLY READ-ONLY.
+Diagnose project AI environment health or generate an update plan. This tool is **STRICTLY READ-ONLY**.
 
 **Doctor mode (default):**
 ```powershell
@@ -21,12 +21,6 @@ Doctor mode inspects:
 - Checksums of managed artifacts
 - Contracts, intelligence structure, and profile commands
 
-Plan mode returns deterministic JSON with:
-- `apply_supported: false`
-- `rollback_supported: false`
-- Conceptual actions with reasons and ownership
-- No files are ever modified
+Plan mode returns a deterministic read-only report of conceptual actions, reasons, and ownership. It does not implement apply, rollback, or run identifiers.
 
-**v0.4.0 does NOT support apply or rollback.** Those operations belong to the future Project Update Engine.
-
-This tool NEVER writes, backs up, or modifies any project files.
+This command is doctor/plan only: it never writes, backs up, or modifies project files.

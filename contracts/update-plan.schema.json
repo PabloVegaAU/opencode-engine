@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:opencode-global:contracts:update-plan:v1",
+  "title": "Update Plan Contract v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["plan_id", "created_at", "source_version", "target_version", "classifications", "operations", "blocked_count", "requires_approval"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "format": "uri"
+    },
+    "plan_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "classifications": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "operations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/operation"
+      }
+    },
+    "blocked_count": {
+      "type": "number",
+      "minimum": 0
+    },
+    "requires_approval": {
+      "type": "boolean",
+      "const": true
+    }
+  },
+  "$defs": {
+    "operation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "path", "migration_id", "reason"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["update", "preserve", "block", "create", "delete"]
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "migration_id": {
+          "type": ["string", "null"]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

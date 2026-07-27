@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:opencode-global:contracts:migration-catalog:v1",
+  "title": "Migration Catalog Contract v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "migrations"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "format": "uri"
+    },
+    "version": {
+      "const": "1"
+    },
+    "migrations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/migration"
+      }
+    }
+  },
+  "$defs": {
+    "migration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "migration_id",
+        "description",
+        "source_version",
+        "target_version",
+        "artifacts",
+        "preconditions",
+        "rollback_id"
+      ],
+      "properties": {
+        "migration_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "source_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "target_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "preconditions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "rollback_id": {
+          "type": ["string", "null"]
+        }
+      }
+    }
+  }
+}

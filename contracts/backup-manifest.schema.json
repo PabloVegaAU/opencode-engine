@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:opencode-global:contracts:backup-manifest:v1",
+  "title": "BackupManifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "backup_id",
+    "created_at",
+    "plan_id",
+    "artifacts",
+    "storage_path"
+  ],
+  "properties": {
+    "backup_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "plan_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "sha256",
+          "size",
+          "mtime"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "size": {
+            "type": "number"
+          },
+          "mtime": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "storage_path": {
+      "type": "string"
+    }
+  }
+}

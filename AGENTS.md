@@ -58,3 +58,46 @@
 - Model, agent, and variant arrive through runtime arguments only. The Project Manifest and Mission Spec never store them.
 - The CLI never pushes, fetches, merges to `main`, or touches remotes. `integration-apply` requires `--approve-protected-ref` to apply changes to protected branches.
 - `mission-run` stops at conflict, failed, interrupted, blocked, or recovery_required and runs at most one writer Task at a time.
+
+## v0.6.0 Capabilities
+
+### Skill Allowlist
+
+The following skills are available and approved for use:
+
+| Skill | Purpose |
+|-------|---------|
+| `accessibility-a11y` | Web accessibility (WCAG) implementation |
+| `codebase-memory` | Structural code queries via knowledge graph |
+| `context7-mcp` | Library/framework documentation retrieval |
+| `customize-opencode` | OpenCode configuration editing |
+| `find-docs` | Developer technology documentation |
+| `find-skills` | Skill discovery and installation |
+| `performance-and-web-vitals` | Lighthouse auditing, Core Web Vitals optimization |
+| `prompt-master` | AI prompt generation and optimization |
+| `skill-creator` | Create, edit, and benchmark skills |
+| `speckit-analyze` | Cross-artifact consistency analysis |
+| `speckit-checklist` | Requirements quality validation |
+| `speckit-clarify` | Feature specification clarification |
+| `speckit-converge` | Codebase vs spec reconciliation |
+| `speckit-constitution` | Project constitution management |
+| `speckit-implement` | Execute implementation plan |
+| `speckit-plan` | Generate design artifacts |
+| `speckit-specify` | Create feature specifications |
+| `speckit-tasks` | Generate dependency-ordered tasks |
+| `speckit-taskstoissues` | Convert tasks to GitHub issues |
+
+### Ownership Classification
+
+OpenCode supports automatic ownership classification of project content:
+
+- **Global**: Neutral runtime defaults, schemas, validators, profiles, routing, and bootstrap tooling owned by the global layer.
+- **Project**: Agents, MCP, skills, prompts, specialized permissions, Speckit, technologies, and `.intelligence/` content owned by each project.
+- **User**: User-provided content, custom configurations, and personal settings.
+- **System**: Built-in capabilities, core runtime features, and platform defaults.
+
+Classification determines:
+- Who may modify or extend the content
+- Where changes should be persisted
+- How conflicts are resolved
+- What permissions are required for access

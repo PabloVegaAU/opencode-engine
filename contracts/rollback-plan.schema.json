@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:opencode-global:contracts:rollback-plan:v1",
+  "title": "Rollback Plan Contract v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["rollback_id", "triggered_by_run_id", "created_at", "operations"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "format": "uri"
+    },
+    "rollback_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "triggered_by_run_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "operations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/rollbackOperation"
+      }
+    }
+  },
+  "$defs": {
+    "rollbackOperation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "path", "backup_ref"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["restore", "remove"]
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "backup_ref": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}
