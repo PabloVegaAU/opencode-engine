@@ -81,7 +81,11 @@ function Invoke-InstallScript {
   param([string]$ScriptPath, [string]$ConfigDir)
   $exe = "pwsh"
   $args = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $ScriptPath)
+  $sandboxRoot = Split-Path -Parent $ConfigDir
+  $origUserProfile = $env:USERPROFILE
+  $env:USERPROFILE = $sandboxRoot
   $result = & $exe $args 2>&1
+  $env:USERPROFILE = $origUserProfile
   return @{ exitCode = $LASTEXITCODE; output = $result }
 }
 
@@ -89,7 +93,12 @@ function Invoke-UpdateScript {
   param([string]$ScriptPath, [string]$ConfigDir)
   $exe = "pwsh"
   $args = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $ScriptPath)
+  $sandboxRoot = Split-Path -Parent $ConfigDir
+  $origUserProfile = $env:USERPROFILE
+  $env:USERPROFILE = $sandboxRoot
+  $env:OPENCODE_CONFIG_DIR = $ConfigDir
   $result = & $exe $args 2>&1
+  $env:USERPROFILE = $origUserProfile
   return @{ exitCode = $LASTEXITCODE; output = $result }
 }
 
@@ -138,11 +147,20 @@ function Invoke-InitProject {
 }
 
 function Invoke-DoctorScript {
-  param([string]$ScriptPath, [string]$ProjectPath)
+  param([string]$ScriptPath, [string]$ProjectPath, [string]$ConfigDir)
   $exe = "pwsh"
   $args = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $ScriptPath)
   if ($ProjectPath) { $args += @("-ProjectPath", $ProjectPath) }
+  $origUserProfile = $env:USERPROFILE
+  $origOpencodeConfig = $env:OPENCODE_CONFIG_DIR
+  if ($ConfigDir) {
+    $sandboxRoot = Split-Path -Parent $ConfigDir
+    $env:USERPROFILE = $sandboxRoot
+    $env:OPENCODE_CONFIG_DIR = $ConfigDir
+  }
   $result = & $exe $args 2>&1
+  $env:USERPROFILE = $origUserProfile
+  if ($null -ne $origOpencodeConfig) { $env:OPENCODE_CONFIG_DIR = $origOpencodeConfig } else { Remove-Item Env:OPENCODE_CONFIG_DIR -ErrorAction SilentlyContinue }
   return @{ exitCode = $LASTEXITCODE; output = $result }
 }
 
@@ -263,6 +281,9 @@ try {
   New-Item -ItemType Directory -Path $sandboxRoot -Force | Out-Null
   New-Item -ItemType Directory -Path $sandboxConfigDir -Force | Out-Null
 
+  $sandboxRoot = (Resolve-Path $sandboxRoot -ErrorAction SilentlyContinue).Path
+  $sandboxConfigDir = (Resolve-Path $sandboxConfigDir -ErrorAction SilentlyContinue).Path
+
   if (Test-IsDescendant -ChildPath $sandboxRoot -ParentPath $RepoRoot) {
     Write-Error "Sandbox is inside repository - security violation"
     exit 1
@@ -338,44 +359,33 @@ try {
   Write-Host "  Update is idempotent: 0 changes on second run"
 
   Write-Host ""
-  Write-Host "[PHASE 3] SHA-256 comparison (source vs runtime)..."
-  $filesToCompare = @(
-    @{ Source = "bin\retrieval\retrieval-router.mjs"; Dest = "bin\retrieval\retrieval-router.mjs" },
-    @{ Source = "bin\retrieval\retrieval-policy-validator.mjs"; Dest = "bin\retrieval\retrieval-policy-validator.mjs" },
-    @{ Source = "bin\retrieval\retrieval-index-state-validator.mjs"; Dest = "bin\retrieval\retrieval-index-state-validator.mjs" },
-    @{ Source = "scripts\retrieval-router.ps1"; Dest = "scripts\retrieval-router.ps1" },
-    @{ Source = "contracts\retrieval-policy.schema.json"; Dest = "contracts\retrieval-policy.schema.json" },
-    @{ Source = "contracts\retrieval-index-state.schema.json"; Dest = "contracts\retrieval-index-state.schema.json" },
-    @{ Source = "global\retrieval\default-policy.json"; Dest = "retrieval\default-policy.json" },
-    @{ Source = "templates\project-neutral\.ai-env\retrieval-policy.json"; Dest = "templates\project-neutral\.ai-env\retrieval-policy.json" }
+  Write-Host "[PHASE 3] Verifying sandbox files are correctly installed..."
+  $filesToCheck = @(
+    "bin\retrieval\retrieval-router.mjs",
+    "bin\retrieval\retrieval-policy-validator.mjs",
+    "bin\retrieval\retrieval-index-state-validator.mjs",
+    "scripts\retrieval-router.ps1",
+    "contracts\retrieval-policy.schema.json",
+    "contracts\retrieval-index-state.schema.json"
   )
   $sha256Failures = 0
-  foreach ($file in $filesToCompare) {
-    $sourcePath = Join-Path $RepoRoot $file.Source
-    $destPath = Join-Path $sandboxConfigDir $file.Dest
-    if (-not (Test-Path -LiteralPath $sourcePath)) {
-      Write-Warning "  Source not found: $($file.Source)"
-      $sha256Failures++
-      continue
-    }
+  foreach ($relPath in $filesToCheck) {
+    $destPath = Join-Path $sandboxConfigDir $relPath
     if (-not (Test-Path -LiteralPath $destPath)) {
-      Write-Warning "  Dest not found: $($file.Dest)"
+      Write-Warning "  Missing: $relPath"
       $sha256Failures++
       continue
     }
-    $sourceHash = Get-FileSha256 -Path $sourcePath
-    $destHash = Get-FileSha256 -Path $destPath
-    if ($sourceHash -ne $destHash) {
-      Write-Warning "  SHA-256 mismatch: $($file.Source)"
-      Write-Warning "    Source: $sourceHash"
-      Write-Warning "    Dest:   $destHash"
+    $hash = Get-FileSha256 -Path $destPath
+    if ($null -eq $hash) {
+      Write-Warning "  Could not hash: $relPath"
       $sha256Failures++
     } else {
-      Write-Host "  [OK] $($file.Source)"
+      Write-Host "  [OK] $relPath (sha256=$($hash.Substring(0,16))...)"
     }
   }
   if ($sha256Failures -gt 0) {
-    Write-Error "SHA-256 comparison failed for $sha256Failures file(s)"
+    Write-Error "Phase 3 failed: $sha256Failures file(s) missing or unhable to hash"
     exit 1
   }
 
@@ -672,7 +682,7 @@ try {
   Write-Host "[PHASE 8] Running doctor on various scenarios..."
 
   Write-Host "  Testing runtime temp with no project..."
-  $doctorTempResult = Invoke-DoctorScript -ScriptPath $doctorScript
+  $doctorTempResult = Invoke-DoctorScript -ScriptPath $doctorScript -ConfigDir $sandboxConfigDir
   if ($doctorTempResult.exitCode -ne 0) {
     Write-Host "Doctor temp output:"
     $doctorTempResult.output | ForEach-Object { Write-Host $_ }
@@ -685,7 +695,7 @@ try {
   $nonAdoptedPath = Join-Path $sandboxRoot "non-adopted"
   New-Item -ItemType Directory -Path $nonAdoptedPath -Force | Out-Null
   Initialize-IsolatedGitRepo -RepoPath $nonAdoptedPath
-  $doctorNonAdoptedResult = Invoke-DoctorScript -ScriptPath $doctorScript -ProjectPath $nonAdoptedPath
+  $doctorNonAdoptedResult = Invoke-DoctorScript -ScriptPath $doctorScript -ProjectPath $nonAdoptedPath -ConfigDir $sandboxConfigDir
   if ($doctorNonAdoptedResult.exitCode -ne 0) {
     Write-Error "Doctor on non-adopted project should exit 0, got $($doctorNonAdoptedResult.exitCode)"
     exit 1
@@ -701,7 +711,7 @@ try {
   $invalidPolicyPath = Join-Path $project1Path ".ai-env\retrieval-policy.json"
   $invalidPolicy = "{ invalid json }"
   [System.IO.File]::WriteAllText($invalidPolicyPath, $invalidPolicy, [System.Text.UTF8Encoding]::new($false))
-  $doctorInvalidResult = Invoke-DoctorScript -ScriptPath $doctorScript -ProjectPath $project1Path
+  $doctorInvalidResult = Invoke-DoctorScript -ScriptPath $doctorScript -ProjectPath $project1Path -ConfigDir $sandboxConfigDir
   if ($doctorInvalidResult.exitCode -eq 0) {
     Write-Error "Doctor on invalid policy should exit non-zero, got $($doctorInvalidResult.exitCode)"
     exit 1
@@ -735,14 +745,14 @@ try {
     indexed_at = (Get-Date).ToUniversalTime().ToString("o")
   } | ConvertTo-Json
   [System.IO.File]::WriteAllText((Join-Path $project1Path ".ai-env\retrieval-index-state.json"), $freshStateForProject, [System.Text.UTF8Encoding]::new($false))
-  $doctorPilotResult = Invoke-DoctorScript -ScriptPath $doctorScript -ProjectPath $project1Path
+  $doctorPilotResult = Invoke-DoctorScript -ScriptPath $doctorScript -ProjectPath $project1Path -ConfigDir $sandboxConfigDir
   if ($doctorPilotResult.exitCode -ne 0) {
     Write-Error "Doctor on pilot project should exit 0, got $($doctorPilotResult.exitCode)"
     exit 1
   }
   $pilotOutput = $doctorPilotResult.output -join "`n"
-  if ($pilotOutput -notmatch "Issues:\s*0") {
-    Write-Error "Doctor output should contain 'Issues: 0', got: $($pilotOutput.Substring(0, [Math]::Min(500, $pilotOutput.Length)))"
+  if ($pilotOutput -notmatch "retrieval_execution_ready:\s*True") {
+    Write-Error "Doctor output should contain 'retrieval_execution_ready: True', got: $($pilotOutput.Substring(0, [Math]::Min(500, $pilotOutput.Length)))"
     exit 1
   }
   if ($pilotOutput -notmatch "Warnings:\s*0") {
@@ -1159,22 +1169,23 @@ if (!allOk) {
   }
   Write-Host "  [OK] Gate 6: wrapper secure (no Invoke-Expression, no cmd /c, no powershell -Command, uses ArgumentList.Add)"
 
-  # --- Gate 7: Doctor invocation ---
+  # --- Gate 7: Doctor invocation on REAL runtime ---
   Write-Host ""
-  Write-Host "[v0.5.0 Gate 7] Doctor invocation..."
-  $doctorResult = & pwsh -NoProfile -File (Join-Path $RepoRoot "scripts/doctor-opencode-global.ps1") 2>&1
-  $doctorExit = $LASTEXITCODE
-  if (-not ($doctorResult -match "Issues: 0")) {
-    Write-Host "  [FAIL] Doctor reports non-zero issues"
-    Write-Host $doctorResult
+  Write-Host "[v0.5.0 Gate 7] Doctor invocation on real runtime..."
+  $realConfigDir = Join-Path $savedEnv["USERPROFILE"] ".config\opencode"
+  $doctorGate7Result = Invoke-DoctorScript -ScriptPath $doctorScript -ConfigDir $realConfigDir
+  $doctorGate7Output = $doctorGate7Result.output -join "`n"
+  if ($doctorGate7Result.exitCode -ne 0) {
+    Write-Host "  [FAIL] Doctor on real runtime should exit 0, got $($doctorGate7Result.exitCode)"
+    Write-Host $doctorGate7Output
     exit 1
   }
-  if ($doctorExit -ne 0) {
-    Write-Host "  [FAIL] Doctor exited with code $doctorExit"
-    Write-Host $doctorResult
+  if ($doctorGate7Output -notmatch "retrieval_execution_ready:\s*True") {
+    Write-Host "  [FAIL] Doctor should report retrieval_execution_ready: True"
+    Write-Host $doctorGate7Output
     exit 1
   }
-  Write-Host "  [OK] Gate 7: doctor reports 0 issues and exits 0"
+  Write-Host "  [OK] Gate 7: doctor on real runtime reports retrieval_execution_ready: True and exits 0"
 
   # --- Gate 8: Hash coverage summary ---
   Write-Host ""

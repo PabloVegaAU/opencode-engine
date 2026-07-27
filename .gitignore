@@ -77,3 +77,6 @@ Thumbs.db
 *.obj
 *.dll
 *.exe
+
+# Test scripts (empty placeholders)
+test-*.ps1

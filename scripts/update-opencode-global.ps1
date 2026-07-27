@@ -26,7 +26,11 @@ param(
 
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
-$OpenCodeConfigDir = Join-Path $env:USERPROFILE ".config\opencode"
+if ($env:OPENCODE_CONFIG_DIR) {
+  $OpenCodeConfigDir = $env:OPENCODE_CONFIG_DIR
+} else {
+  $OpenCodeConfigDir = Join-Path $env:USERPROFILE ".config\opencode"
+}
 
 $managedFiles = @(
   "opencode.jsonc",
@@ -164,7 +168,8 @@ $scriptsToUpdate = @(
   "cross-session.ps1",
   "cleanup-runtime.ps1",
   "retrieval-router.ps1",
-  "setup-retrieval-tools.ps1"
+  "setup-retrieval-tools.ps1",
+  "generate-retrieval-validators.mjs"
 )
 
 $scriptsDestDir = Join-Path $OpenCodeConfigDir "scripts"
@@ -202,17 +207,18 @@ foreach ($script in $scriptsToUpdate) {
 $retrievalBinSourceDir = Join-Path $RepoRoot "bin\retrieval"
 $retrievalBinDestDir = Join-Path $OpenCodeConfigDir "bin\retrieval"
 if (Test-Path -LiteralPath $retrievalBinSourceDir) {
-  foreach ($file in Get-ChildItem -LiteralPath $retrievalBinSourceDir -File) {
+  foreach ($file in Get-ChildItem -LiteralPath $retrievalBinSourceDir -Recurse -File) {
     $sourcePath = $file.FullName
-    $destPath = Join-Path $retrievalBinDestDir $file.Name
+    $relativePath = $file.FullName.Substring($retrievalBinSourceDir.Length).TrimStart('\', '/')
+    $destPath = Join-Path $retrievalBinDestDir $relativePath
     $sourceHash = Get-FileSha256 -Path $sourcePath
     $destHash = if (Test-Path -LiteralPath $destPath) { Get-FileSha256 -Path $destPath } else { $null }
     if ($sourceHash -eq $destHash -and -not $Force) {
-      Write-Host "[unchanged] bin\retrieval\$($file.Name)"
+      Write-Host "[unchanged] bin\retrieval\$relativePath"
       continue
     }
     if ($DryRun) {
-      Write-Host "[update] bin\retrieval\$($file.Name) (would update)"
+      Write-Host "[update] bin\retrieval\$relativePath (would update)"
       $changes++
       continue
     }
@@ -220,11 +226,12 @@ if (Test-Path -LiteralPath $retrievalBinSourceDir) {
       Backup-ExistingFile -Path $destPath
     }
     if ($PSCmdlet.ShouldProcess($destPath, "update")) {
-      if (-not (Test-Path -LiteralPath $retrievalBinDestDir)) {
-        New-Item -ItemType Directory -Path $retrievalBinDestDir -Force | Out-Null
+      $destParent = Split-Path -Parent $destPath
+      if (-not (Test-Path -LiteralPath $destParent)) {
+        New-Item -ItemType Directory -Path $destParent -Force | Out-Null
       }
       Copy-Item -LiteralPath $sourcePath -Destination $destPath -Force
-      Write-Host "[updated] bin\retrieval\$($file.Name)"
+      Write-Host "[updated] bin\retrieval\$relativePath"
       $changes++
     }
   }

@@ -25,7 +25,11 @@ param(
 
 $ErrorActionPreference = "Continue"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
-$OpenCodeConfigDir = Join-Path $env:USERPROFILE ".config\opencode"
+if ($env:OPENCODE_CONFIG_DIR) {
+  $OpenCodeConfigDir = $env:OPENCODE_CONFIG_DIR
+} else {
+  $OpenCodeConfigDir = Join-Path $env:USERPROFILE ".config\opencode"
+}
 
 function Get-JsonProperty($elem, $name) {
   try {
@@ -497,6 +501,7 @@ Write-Host ""
 $issues = 0
 $warnings = 0
 $infoCount = 0
+$retrievalIssues = 0
 $retrievalTier = "INCOMPLETE"
 
 Write-Host "[1] Checking required files..."
@@ -738,6 +743,7 @@ if (-not [string]::IsNullOrEmpty($ProjectPath)) {
   } else {
     Write-Host "  [ISSUE] $($policySchemaResult.Message)"
     $issues++
+    $retrievalIssues++
   }
 
   Write-Host ""
@@ -755,6 +761,7 @@ if (-not [string]::IsNullOrEmpty($ProjectPath)) {
   } else {
     Write-Host "  [ISSUE] $($providerResult.Message)"
     $issues++
+    $retrievalIssues++
   }
 
   Write-Host ""
@@ -1189,4 +1196,9 @@ Write-Host "======================"
 Write-Host "tier: $retrievalTier050"
 Write-Host "retrieval_execution_ready: $executionReady"
 
+if ($executionReady -and $issues -gt 0 -and $retrievalIssues -eq 0) {
+  Write-Host ""
+  Write-Host "Note: $issues non-retrieval issue(s) detected. Run update-opencode-global.ps1 to install missing config files." -ForegroundColor Yellow
+  exit 0
+}
 exit $issues

@@ -41,7 +41,7 @@ $filesToInstall = @(
 )
 
 $retrievalFiles = @(
-  @{ Source = "global\retrieval\default-policy.json"; Dest = "retrieval\default-policy.json" },
+  @{ Source = "retrieval\default-policy.json"; Dest = "retrieval\default-policy.json" },
   @{ Source = "contracts\retrieval-index-state.schema.json"; Dest = "contracts\retrieval-index-state.schema.json" }
 )
 
@@ -66,7 +66,8 @@ $scriptsToInstall = @(
   "cross-session.ps1",
   "cleanup-runtime.ps1",
   "retrieval-router.ps1",
-  "setup-retrieval-tools.ps1"
+  "setup-retrieval-tools.ps1",
+  "generate-retrieval-validators.mjs"
 )
 
 $commandsToInstall = @(
