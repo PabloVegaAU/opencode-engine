@@ -58,6 +58,15 @@
       "exclude_patterns": []
     },
 
+    "bin_orchestration": {
+      "description": "Cross-session orchestration CLI (stub implementation)",
+      "source_prefix": "bin/orchestration/",
+      "runtime_prefix": "bin/orchestration/",
+      "entries": [
+        { "source": "bin/orchestration/cross-session-cli.mjs", "runtime": "bin/orchestration/cross-session-cli.mjs" }
+      ]
+    },
+
     "templates": {
       "description": "Project-neutral templates for initialization",
       "source_prefix": "templates/project-neutral/",
