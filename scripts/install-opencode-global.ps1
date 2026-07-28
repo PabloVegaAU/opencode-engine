@@ -27,10 +27,21 @@
 .PARAMETER DryRun
   Show what would be installed without making changes
 
+.PARAMETER SkipDoctor
+  Skip post-install doctor verification
+
+.PARAMETER SkipCertify
+  Skip post-install certify verification
+
+.PARAMETER Quick
+  Skip all post-install verification (equivalent to -SkipDoctor -SkipCertify)
+
 .EXAMPLE
-  # From source repository
+  # From source repository - full install with doctor and certify
   .\install-opencode-global.ps1
-  .\install-opencode-global.ps1 -Force
+
+  # Quick install - files only, no verification
+  .\install-opencode-global.ps1 -Quick
 
   # From installed runtime - must specify source root
   ~/.config/opencode/scripts/install-opencode-global.ps1 -SourceRoot C:\OpenCode\opencode-global-src
@@ -41,7 +52,10 @@ param(
   [Parameter(Mandatory=$false)]
   [string]$SourceRoot,
   [switch]$Force,
-  [switch]$DryRun
+  [switch]$DryRun,
+  [switch]$SkipDoctor,
+  [switch]$SkipCertify,
+  [switch]$Quick
 )
 
 $ErrorActionPreference = "Stop"
@@ -255,20 +269,81 @@ foreach ($category in $byCategory.Keys) {
 Write-Host ""
 if ($DryRun) {
   Write-Host "Dry run complete. $wouldInstallCount file(s) would be installed."
-} else {
-  if ($errorCount -gt 0) {
-    Write-Host "Installation complete with $errorCount error(s)."
-  } else {
-    Write-Host "Installation complete. $installedCount file(s) installed."
-  }
-  Write-Host ""
-  Write-Host "Next steps:"
-  Write-Host "  1. Install OpenCode: npm install -g opencode-ai"
-  Write-Host "  2. Authenticate: opencode auth login"
-  Write-Host "  3. Run diagnostics: .\doctor-opencode-global.ps1"
-  Write-Host "  4. Certify installation: .\certify-opencode-global.ps1"
-  Write-Host ""
-  Write-Host "Optional: cross-session.ps1 is installed as a convenience wrapper."
-  Write-Host "  It requires the OpenCode runtime CLI at:"
-  Write-Host "  $env:USERPROFILE\.config\opencode\bin\orchestration\cross-session-cli.mjs"
+  return
 }
+
+if ($errorCount -gt 0) {
+  Write-Host "Installation completed with $errorCount error(s)."
+} else {
+  Write-Host "Installation complete. $installedCount file(s) installed."
+}
+
+# Quick mode skips all post-install verification
+if ($Quick) {
+  Write-Host ""
+  Write-Host "Quick mode - post-install verification skipped."
+  Write-Host "Run .\doctor-opencode-global.ps1 or .\certify-opencode-global.ps1 manually."
+  return
+}
+
+# Post-install verification: doctor
+$doctorFailed = $false
+if (-not $SkipDoctor) {
+  Write-Host ""
+  Write-Host "[doctor] Running post-install verification..."
+  $doctorScript = Join-Path $ScriptRootDir "doctor-opencode-global.ps1"
+  if (Test-Path -LiteralPath $doctorScript -PathType Leaf) {
+    $doctorResult = & $doctorScript 2>&1
+    $doctorExit = $LASTEXITCODE
+    if ($doctorExit -ne 0) {
+      Write-Host "[doctor] FAILED - exit code $doctorExit" -ForegroundColor Red
+      Write-Host $doctorResult | Select-Object -Last 20
+      $doctorFailed = $true
+    } else {
+      Write-Host "[doctor] PASSED" -ForegroundColor Green
+    }
+  } else {
+    Write-Host "[doctor] Script not found at $doctorScript" -ForegroundColor Yellow
+  }
+}
+
+# Post-install verification: certify
+$certifyFailed = $false
+if (-not $SkipCertify) {
+  Write-Host ""
+  Write-Host "[certify] Running certification..."
+  $certifyScript = Join-Path $ScriptRootDir "certify-opencode-global.ps1"
+  if (Test-Path -LiteralPath $certifyScript -PathType Leaf) {
+    $certifyResult = & $certifyScript 2>&1
+    $certifyExit = $LASTEXITCODE
+    if ($certifyExit -ne 0) {
+      Write-Host "[certify] FAILED - exit code $certifyExit" -ForegroundColor Red
+      Write-Host $certifyResult | Select-Object -Last 20
+      $certifyFailed = $true
+    } else {
+      Write-Host "[certify] PASSED" -ForegroundColor Green
+    }
+  } else {
+    Write-Host "[certify] Script not found at $certifyScript" -ForegroundColor Yellow
+  }
+}
+
+# Final status and exit code
+Write-Host ""
+if ($doctorFailed) {
+  Write-Host "INSTALL_FAILED: Doctor verification failed. Run .\doctor-opencode-global.ps1 for details." -ForegroundColor Red
+  exit 1
+}
+if ($certifyFailed) {
+  Write-Host "INSTALL_FAILED: Certify verification failed. Run .\certify-opencode-global.ps1 for details." -ForegroundColor Red
+  exit 2
+}
+if (-not $SkipDoctor -and -not $SkipCertify) {
+  Write-Host "OpenCode Global installation certified successfully." -ForegroundColor Green
+} else {
+  Write-Host "OpenCode Global installation complete." -ForegroundColor Green
+}
+Write-Host ""
+Write-Host "Optional: cross-session.ps1 is installed as a convenience wrapper."
+Write-Host "  It requires the OpenCode runtime CLI at:"
+Write-Host "  $env:USERPROFILE\.config\opencode\bin\orchestration\cross-session-cli.mjs"

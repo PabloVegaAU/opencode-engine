@@ -28,20 +28,32 @@ OpenCode Global provides:
 
 ```powershell
 # Clone this repository
-git clone <repo>/opencode-global.git C:\OpenCode\opencode-global-src
+git clone <repo>/opencode-engine.git C:\OpenCode\opencode-engine
 
-# Install
-cd C:\OpenCode\opencode-global-src
+# Install (includes doctor + certify verification)
+cd C:\OpenCode\opencode-engine
 pwsh .\scripts\install-opencode-global.ps1
 
 # Authenticate
 opencode providers login
+```
 
-# Diagnose
-pwsh .\scripts\doctor-opencode-global.ps1
+### Install Options
 
-# Certify
-pwsh .\scripts\certify-opencode-global.ps1
+| Command | Behavior |
+|---------|----------|
+| `.\install-opencode-global.ps1` | Full install + doctor + certify |
+| `.\install-opencode-global.ps1 -Quick` | Files only, no verification |
+| `.\install-opencode-global.ps1 -SkipCertify` | Install + doctor, skip certify |
+
+### Updating
+
+```powershell
+# Full update with verification
+pwsh .\scripts\update-opencode-global.ps1
+
+# Quick update
+pwsh .\scripts\update-opencode-global.ps1 -Quick
 ```
 
 ## Usage with Projects

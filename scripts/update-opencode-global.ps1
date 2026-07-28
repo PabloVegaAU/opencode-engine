@@ -24,11 +24,21 @@
 .PARAMETER DryRun
   Show what would be updated without making changes
 
+.PARAMETER SkipDoctor
+  Skip post-update doctor verification
+
+.PARAMETER SkipCertify
+  Skip post-update certify verification
+
+.PARAMETER Quick
+  Skip all post-update verification (equivalent to -SkipDoctor -SkipCertify)
+
 .EXAMPLE
-  # From source repository
+  # From source repository - full update with doctor and certify
   .\update-opencode-global.ps1
-  .\update-opencode-global.ps1 -DryRun
-  .\update-opencode-global.ps1 -Force
+
+  # Quick update - files only, no verification
+  .\update-opencode-global.ps1 -Quick
 
   # From installed runtime - must specify source root
   ~/.config/opencode/scripts/update-opencode-global.ps1 -SourceRoot C:\OpenCode\opencode-global-src
@@ -39,7 +49,10 @@ param(
   [Parameter(Mandatory=$false)]
   [string]$SourceRoot,
   [switch]$Force,
-  [switch]$DryRun
+  [switch]$DryRun,
+  [switch]$SkipDoctor,
+  [switch]$SkipCertify,
+  [switch]$Quick
 )
 
 $ErrorActionPreference = "Stop"
@@ -297,12 +310,77 @@ Write-Host ""
 
 if ($DryRun) {
   Write-Host "Dry run complete. $wouldChange file(s) would be updated."
-} else {
-  if ($changes -gt 0) {
-    Write-Host "Update complete. $changes file(s) updated."
-    Write-Host ""
-    Write-Host "Backups saved to: runtime/backups/managed/<timestamp>/"
-  }
+  return
+}
+
+if ($changes -gt 0) {
+  Write-Host "Update complete. $changes file(s) updated."
   Write-Host ""
-  Write-Host "Run .\doctor-opencode-global.ps1 to verify the installation."
+  Write-Host "Backups saved to: runtime/backups/managed/<timestamp>/"
+}
+
+# Quick mode skips all post-update verification
+if ($Quick) {
+  Write-Host ""
+  Write-Host "Quick mode - post-update verification skipped."
+  Write-Host "Run .\doctor-opencode-global.ps1 or .\certify-opencode-global.ps1 manually."
+  return
+}
+
+# Post-update verification: doctor
+$doctorFailed = $false
+if (-not $SkipDoctor) {
+  Write-Host ""
+  Write-Host "[doctor] Running post-update verification..."
+  $doctorScript = Join-Path $ScriptRootDir "doctor-opencode-global.ps1"
+  if (Test-Path -LiteralPath $doctorScript -PathType Leaf) {
+    $doctorResult = & $doctorScript 2>&1
+    $doctorExit = $LASTEXITCODE
+    if ($doctorExit -ne 0) {
+      Write-Host "[doctor] FAILED - exit code $doctorExit" -ForegroundColor Red
+      Write-Host $doctorResult | Select-Object -Last 20
+      $doctorFailed = $true
+    } else {
+      Write-Host "[doctor] PASSED" -ForegroundColor Green
+    }
+  } else {
+    Write-Host "[doctor] Script not found at $doctorScript" -ForegroundColor Yellow
+  }
+}
+
+# Post-update verification: certify
+$certifyFailed = $false
+if (-not $SkipCertify) {
+  Write-Host ""
+  Write-Host "[certify] Running certification..."
+  $certifyScript = Join-Path $ScriptRootDir "certify-opencode-global.ps1"
+  if (Test-Path -LiteralPath $certifyScript -PathType Leaf) {
+    $certifyResult = & $certifyScript 2>&1
+    $certifyExit = $LASTEXITCODE
+    if ($certifyExit -ne 0) {
+      Write-Host "[certify] FAILED - exit code $certifyExit" -ForegroundColor Red
+      Write-Host $certifyResult | Select-Object -Last 20
+      $certifyFailed = $true
+    } else {
+      Write-Host "[certify] PASSED" -ForegroundColor Green
+    }
+  } else {
+    Write-Host "[certify] Script not found at $certifyScript" -ForegroundColor Yellow
+  }
+}
+
+# Final status and exit code
+Write-Host ""
+if ($doctorFailed) {
+  Write-Host "UPDATE_FAILED: Doctor verification failed. Run .\doctor-opencode-global.ps1 for details." -ForegroundColor Red
+  exit 1
+}
+if ($certifyFailed) {
+  Write-Host "UPDATE_FAILED: Certify verification failed. Run .\certify-opencode-global.ps1 for details." -ForegroundColor Red
+  exit 2
+}
+if (-not $SkipDoctor -and -not $SkipCertify) {
+  Write-Host "OpenCode Global update certified successfully." -ForegroundColor Green
+} else {
+  Write-Host "OpenCode Global update complete." -ForegroundColor Green
 }
