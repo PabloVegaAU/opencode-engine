@@ -84,11 +84,14 @@ function Invoke-InstallScript {
   $sandboxRoot = Split-Path -Parent $ConfigDir
   $origUserProfile = $env:USERPROFILE
   $origOpencodeConfig = $env:OPENCODE_CONFIG_DIR
+  $origSourceRoot = $env:OPENCODE_SOURCE_ROOT
   $env:USERPROFILE = $sandboxRoot
   $env:OPENCODE_CONFIG_DIR = $ConfigDir
+  if ($RepoRoot -ne $env:USERPROFILE) { $env:OPENCODE_SOURCE_ROOT = $RepoRoot }
   $result = & $exe $args 2>&1
   $env:USERPROFILE = $origUserProfile
   if ($null -ne $origOpencodeConfig) { $env:OPENCODE_CONFIG_DIR = $origOpencodeConfig } else { Remove-Item Env:OPENCODE_CONFIG_DIR -ErrorAction SilentlyContinue }
+  if ($null -ne $origSourceRoot) { $env:OPENCODE_SOURCE_ROOT = $origSourceRoot } else { Remove-Item Env:OPENCODE_SOURCE_ROOT -ErrorAction SilentlyContinue }
   return @{ exitCode = $LASTEXITCODE; output = $result }
 }
 
@@ -98,10 +101,15 @@ function Invoke-UpdateScript {
   $args = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $ScriptPath, "-SkipCertify", "-SkipDoctor")
   $sandboxRoot = Split-Path -Parent $ConfigDir
   $origUserProfile = $env:USERPROFILE
+  $origOpencodeConfig = $env:OPENCODE_CONFIG_DIR
+  $origSourceRoot = $env:OPENCODE_SOURCE_ROOT
   $env:USERPROFILE = $sandboxRoot
   $env:OPENCODE_CONFIG_DIR = $ConfigDir
+  if ($RepoRoot -ne $env:USERPROFILE) { $env:OPENCODE_SOURCE_ROOT = $RepoRoot }
   $result = & $exe $args 2>&1
   $env:USERPROFILE = $origUserProfile
+  if ($null -ne $origOpencodeConfig) { $env:OPENCODE_CONFIG_DIR = $origOpencodeConfig } else { Remove-Item Env:OPENCODE_CONFIG_DIR -ErrorAction SilentlyContinue }
+  if ($null -ne $origSourceRoot) { $env:OPENCODE_SOURCE_ROOT = $origSourceRoot } else { Remove-Item Env:OPENCODE_SOURCE_ROOT -ErrorAction SilentlyContinue }
   return @{ exitCode = $LASTEXITCODE; output = $result }
 }
 
