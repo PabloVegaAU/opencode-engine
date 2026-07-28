@@ -8,14 +8,39 @@
   creates isolated Git repos with various states, tests retrieval-router.ps1 from the
   installed runtime, verifies external write isolation, and validates doctor behavior.
 
+  IMPORTANT: When run from the installed runtime (not source), you must provide
+  -SourceRoot pointing to the original source repository, or set OPENCODE_SOURCE_ROOT.
+
+.PARAMETER SourceRoot
+  Path to the source repository root (contains distribution/, global/, scripts/, etc.)
+  Required when running from installed runtime. Defaults to parent of script directory
+  if running from source repository.
+
 .EXAMPLE
+  # From source repository
   .\certify-opencode-global.ps1
+
+  # From installed runtime - must specify source root
+  ~/.config/opencode/scripts/certify-opencode-global.ps1 -SourceRoot C:\OpenCode\opencode-global-src
 #>
 [CmdletBinding()]
-param()
+param(
+  [Parameter(Mandatory=$false)]
+  [string]$SourceRoot
+)
 
 $ErrorActionPreference = "Stop"
-$RepoRoot = Split-Path -Parent $PSScriptRoot
+
+# Determine RepoRoot
+if ($SourceRoot) {
+  $RepoRoot = $SourceRoot
+} elseif ($env:OPENCODE_SOURCE_ROOT) {
+  $RepoRoot = $env:OPENCODE_SOURCE_ROOT
+} else {
+  $RepoRoot = Split-Path -Parent $PSScriptRoot
+}
+
+$RepoRoot = [System.IO.Path]::GetFullPath($RepoRoot)
 
 function Get-FileSha256 {
   param([string]$Path)
@@ -80,36 +105,30 @@ function Test-IsDescendant {
 function Invoke-InstallScript {
   param([string]$ScriptPath, [string]$ConfigDir)
   $exe = "pwsh"
-  $args = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $ScriptPath, "-SkipCertify", "-SkipDoctor")
+  $args = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $ScriptPath, "-SourceRoot", $RepoRoot, "-SkipCertify", "-SkipDoctor")
   $sandboxRoot = Split-Path -Parent $ConfigDir
   $origUserProfile = $env:USERPROFILE
   $origOpencodeConfig = $env:OPENCODE_CONFIG_DIR
-  $origSourceRoot = $env:OPENCODE_SOURCE_ROOT
   $env:USERPROFILE = $sandboxRoot
   $env:OPENCODE_CONFIG_DIR = $ConfigDir
-  if ($RepoRoot -ne $env:USERPROFILE) { $env:OPENCODE_SOURCE_ROOT = $RepoRoot }
   $result = & $exe $args 2>&1
   $env:USERPROFILE = $origUserProfile
   if ($null -ne $origOpencodeConfig) { $env:OPENCODE_CONFIG_DIR = $origOpencodeConfig } else { Remove-Item Env:OPENCODE_CONFIG_DIR -ErrorAction SilentlyContinue }
-  if ($null -ne $origSourceRoot) { $env:OPENCODE_SOURCE_ROOT = $origSourceRoot } else { Remove-Item Env:OPENCODE_SOURCE_ROOT -ErrorAction SilentlyContinue }
   return @{ exitCode = $LASTEXITCODE; output = $result }
 }
 
 function Invoke-UpdateScript {
   param([string]$ScriptPath, [string]$ConfigDir)
   $exe = "pwsh"
-  $args = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $ScriptPath, "-SkipCertify", "-SkipDoctor")
+  $args = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $ScriptPath, "-SourceRoot", $RepoRoot, "-SkipCertify", "-SkipDoctor")
   $sandboxRoot = Split-Path -Parent $ConfigDir
   $origUserProfile = $env:USERPROFILE
   $origOpencodeConfig = $env:OPENCODE_CONFIG_DIR
-  $origSourceRoot = $env:OPENCODE_SOURCE_ROOT
   $env:USERPROFILE = $sandboxRoot
   $env:OPENCODE_CONFIG_DIR = $ConfigDir
-  if ($RepoRoot -ne $env:USERPROFILE) { $env:OPENCODE_SOURCE_ROOT = $RepoRoot }
   $result = & $exe $args 2>&1
   $env:USERPROFILE = $origUserProfile
   if ($null -ne $origOpencodeConfig) { $env:OPENCODE_CONFIG_DIR = $origOpencodeConfig } else { Remove-Item Env:OPENCODE_CONFIG_DIR -ErrorAction SilentlyContinue }
-  if ($null -ne $origSourceRoot) { $env:OPENCODE_SOURCE_ROOT = $origSourceRoot } else { Remove-Item Env:OPENCODE_SOURCE_ROOT -ErrorAction SilentlyContinue }
   return @{ exitCode = $LASTEXITCODE; output = $result }
 }
 
