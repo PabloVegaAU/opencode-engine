@@ -63,8 +63,8 @@ describe('idempotency', () => {
   });
 
   it('same plan applied twice produces identical final state', async () => {
-    // First: install fresh
-    const installResult = await runPowershell(INSTALL_SCRIPT, '');
+    // First: install fresh (skip certify - tested separately)
+    const installResult = await runPowershell(INSTALL_SCRIPT, '-SkipCertify');
     assert.strictEqual(installResult.err, null, `First install should succeed: ${installResult.stderr}`);
 
     // Capture state after first install
@@ -72,14 +72,14 @@ describe('idempotency', () => {
     const installOutput = installResult.stdout;
 
     // Second: apply update (should be idempotent - no changes needed)
-    const updateResult1 = await runPowershell(UPDATE_SCRIPT, `-SourceRoot "${GLOBAL_ROOT}" -Confirm:$false`);
+    const updateResult1 = await runPowershell(UPDATE_SCRIPT, `-SourceRoot "${GLOBAL_ROOT}" -SkipCertify -Confirm:$false`);
     assert.strictEqual(updateResult1.err, null, `First update should succeed: ${updateResult1.stderr}`);
 
     // Capture state after first update
     const stateAfterUpdate1 = getFileSnapshot(sandboxDir);
 
     // Third: apply same update again
-    const updateResult2 = await runPowershell(UPDATE_SCRIPT, `-SourceRoot "${GLOBAL_ROOT}" -Confirm:$false`);
+    const updateResult2 = await runPowershell(UPDATE_SCRIPT, `-SourceRoot "${GLOBAL_ROOT}" -SkipCertify -Confirm:$false`);
     assert.strictEqual(updateResult2.err, null, `Second update should succeed: ${updateResult2.stderr}`);
 
     // Capture state after second update
@@ -113,8 +113,8 @@ describe('idempotency', () => {
   });
 
   it('update after local modification produces consistent backup state', async () => {
-    // First: install fresh
-    const installResult = await runPowershell(INSTALL_SCRIPT, '');
+    // First: install fresh (skip certify - tested separately)
+    const installResult = await runPowershell(INSTALL_SCRIPT, '-SkipCertify');
     assert.strictEqual(installResult.err, null, `Install should succeed: ${installResult.stderr}`);
 
     // Make a local modification to a managed file
@@ -124,7 +124,7 @@ describe('idempotency', () => {
     fs.writeFileSync(agentsPath, modifiedContent, 'utf8');
 
     // Run update (should backup the modification and restore original)
-    const updateResult = await runPowershell(UPDATE_SCRIPT, `-SourceRoot "${GLOBAL_ROOT}" -Confirm:$false`);
+    const updateResult = await runPowershell(UPDATE_SCRIPT, `-SourceRoot "${GLOBAL_ROOT}" -SkipCertify -Confirm:$false`);
     assert.strictEqual(updateResult.err, null, `Update should succeed: ${updateResult.stderr}`);
 
     // Verify local modification was overwritten
@@ -136,7 +136,7 @@ describe('idempotency', () => {
     const stateAfterModification = getFileSnapshot(sandboxDir);
 
     // Apply update again - should be idempotent
-    const updateResult2 = await runPowershell(UPDATE_SCRIPT, `-SourceRoot "${GLOBAL_ROOT}" -Confirm:$false`);
+    const updateResult2 = await runPowershell(UPDATE_SCRIPT, `-SourceRoot "${GLOBAL_ROOT}" -SkipCertify -Confirm:$false`);
     assert.strictEqual(updateResult2.err, null, `Second update should succeed: ${updateResult2.stderr}`);
 
     // Capture state after second update
