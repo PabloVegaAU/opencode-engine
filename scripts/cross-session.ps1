@@ -100,8 +100,8 @@ $CliPath = Join-Path $RuntimeRoot "bin\orchestration\cross-session-cli.mjs"
 
 if (-not (Test-Path -LiteralPath $CliPath)) {
   Write-Warning "Cross-session CLI not found at: $CliPath"
-  Write-Warning "This is an OPTIONAL capability. Install OpenCode runtime to enable cross-session orchestration."
-  exit 1
+  Write-Warning "This is an OPTIONAL capability. Cross-session commands are disabled."
+  exit 0
 }
 
 if ($Subcommand -eq "doctor") {
@@ -129,5 +129,21 @@ if ($TargetRef) { $args += "--target-ref"; $args += $TargetRef }
 if ($ExpectedTargetCommit) { $args += "--expected-target-commit"; $args += $ExpectedTargetCommit }
 if ($ApproveLocalIntegration) { $args += "--approve-local-integration" }
 
-& node $CliPath @args
-exit $LASTEXITCODE
+$cliOutput = & node $CliPath @args 2>&1
+$cliExit = $LASTEXITCODE
+
+# Check if CLI indicates cross-session is not implemented
+if ($cliOutput -match "NOT IMPLEMENTED") {
+  Write-Host "Cross-session command '$Subcommand' is not yet implemented."
+  Write-Host "This feature is planned for a future release."
+  Write-Host "No changes were made to any repositories."
+  exit 0
+}
+
+if ($cliExit -ne 0) {
+  Write-Error "Cross-session CLI failed with exit code: $cliExit"
+  if ($cliOutput) { Write-Error $cliOutput }
+  exit $cliExit
+}
+
+exit 0
