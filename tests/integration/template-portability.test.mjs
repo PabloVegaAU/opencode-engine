@@ -286,11 +286,11 @@ describe('Updater Doctor-Plan Only', () => {
 });
 
 describe('Install Script Distribution Lists', () => {
-  it('install-opencode-global.ps1 distributes exactly 8 commands', () => {
+  it('install-opencode-global.ps1 distributes exactly 11 commands', () => {
     const manifestPath = join(REPO_ROOT, 'distribution', 'runtime-manifest.json');
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
     const commands = manifest.categories.commands.entries;
-    assert.strictEqual(commands.length, 8, 'should have exactly 8 commands');
+    assert.strictEqual(commands.length, 11, 'should have exactly 11 commands');
     const cmdNames = commands.map(e => basename(e.runtime));
     assert.ok(cmdNames.includes('go.md'), 'should include go.md');
     assert.ok(cmdNames.includes('chatgpt-plus.md'), 'should include chatgpt-plus.md');
@@ -300,13 +300,16 @@ describe('Install Script Distribution Lists', () => {
     assert.ok(cmdNames.includes('init-ai-env.md'), 'should include init-ai-env.md');
     assert.ok(cmdNames.includes('doctor-ai-env.md'), 'should include doctor-ai-env.md');
     assert.ok(cmdNames.includes('update-ai-env.md'), 'should include update-ai-env.md');
+    assert.ok(cmdNames.includes('ownership-inspect.md'), 'should include ownership-inspect.md');
+    assert.ok(cmdNames.includes('update-apply.md'), 'should include update-apply.md');
+    assert.ok(cmdNames.includes('update-rollback.md'), 'should include update-rollback.md');
   });
 
-  it('install-opencode-global.ps1 distributes exactly 11 runtime scripts', () => {
+  it('install-opencode-global.ps1 distributes exactly 12 runtime scripts', () => {
     const manifestPath = join(REPO_ROOT, 'distribution', 'runtime-manifest.json');
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
     const scripts = manifest.categories.runtime_scripts.entries;
-    assert.strictEqual(scripts.length, 11, 'should have exactly 11 runtime scripts');
+    assert.strictEqual(scripts.length, 12, 'should have exactly 12 runtime scripts');
     const scriptNames = scripts.map(e => basename(e.runtime));
     assert.ok(scriptNames.includes('install-opencode-global.ps1'), 'should include install-opencode-global.ps1');
     assert.ok(scriptNames.includes('update-opencode-global.ps1'), 'should include update-opencode-global.ps1');
@@ -319,6 +322,7 @@ describe('Install Script Distribution Lists', () => {
     assert.ok(scriptNames.includes('cleanup-runtime.ps1'), 'should include cleanup-runtime.ps1');
     assert.ok(scriptNames.includes('retrieval-router.ps1'), 'should include retrieval-router.ps1');
     assert.ok(scriptNames.includes('setup-retrieval-tools.ps1'), 'should include setup-retrieval-tools.ps1');
+    assert.ok(scriptNames.includes('ownership-update.ps1'), 'should include ownership-update.ps1');
   });
 
   it('install-opencode-global.ps1 distributes bin/retrieval recursively', () => {
@@ -373,8 +377,8 @@ describe('Update Script Distribution Lists', () => {
     // Update uses the same inventory as install - both consume Get-RuntimeManifestInventory
     const commands = manifest.categories.commands.entries;
     const scripts = manifest.categories.runtime_scripts.entries;
-    assert.strictEqual(commands.length, 8, 'should have exactly 8 commands');
-    assert.strictEqual(scripts.length, 11, 'should have exactly 11 runtime scripts');
+    assert.strictEqual(commands.length, 11, 'should have exactly 11 commands');
+    assert.strictEqual(scripts.length, 12, 'should have exactly 12 runtime scripts');
   });
 
   it('update-opencode-global.ps1 distributes setup-retrieval-tools.ps1', () => {
