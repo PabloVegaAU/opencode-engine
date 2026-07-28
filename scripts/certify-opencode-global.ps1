@@ -80,7 +80,7 @@ function Test-IsDescendant {
 function Invoke-InstallScript {
   param([string]$ScriptPath, [string]$ConfigDir)
   $exe = "pwsh"
-  $args = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $ScriptPath)
+  $args = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $ScriptPath, "-SkipCertify", "-SkipDoctor")
   $sandboxRoot = Split-Path -Parent $ConfigDir
   $origUserProfile = $env:USERPROFILE
   $env:USERPROFILE = $sandboxRoot
@@ -92,7 +92,7 @@ function Invoke-InstallScript {
 function Invoke-UpdateScript {
   param([string]$ScriptPath, [string]$ConfigDir)
   $exe = "pwsh"
-  $args = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $ScriptPath)
+  $args = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $ScriptPath, "-SkipCertify", "-SkipDoctor")
   $sandboxRoot = Split-Path -Parent $ConfigDir
   $origUserProfile = $env:USERPROFILE
   $env:USERPROFILE = $sandboxRoot
