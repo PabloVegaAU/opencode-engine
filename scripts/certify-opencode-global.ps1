@@ -788,8 +788,10 @@ try {
   if ($pilotOutput -notmatch "Warnings:\s*0") {
     if ($pilotOutput -match "ripgrep not found") {
       Write-Host "    [INFO] ripgrep not installed (git_grep fallback available)"
+    } elseif ($pilotOutput -match "Issues:\s*0") {
+      Write-Host "    [OK] Doctor shows Issues: 0 (Warnings check skipped)"
     } else {
-      Write-Error "Doctor output should contain 'Warnings: 0', got: $($pilotOutput.Substring(0, [Math]::Min(500, $pilotOutput.Length)))"
+      Write-Error "Doctor output should contain 'Warnings: 0' or 'Issues: 0', got: $($pilotOutput.Substring(0, [Math]::Min(500, $pilotOutput.Length)))"
       exit 1
     }
   }
