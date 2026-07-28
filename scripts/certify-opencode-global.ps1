@@ -83,9 +83,12 @@ function Invoke-InstallScript {
   $args = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $ScriptPath, "-SkipCertify", "-SkipDoctor")
   $sandboxRoot = Split-Path -Parent $ConfigDir
   $origUserProfile = $env:USERPROFILE
+  $origOpencodeConfig = $env:OPENCODE_CONFIG_DIR
   $env:USERPROFILE = $sandboxRoot
+  $env:OPENCODE_CONFIG_DIR = $ConfigDir
   $result = & $exe $args 2>&1
   $env:USERPROFILE = $origUserProfile
+  if ($null -ne $origOpencodeConfig) { $env:OPENCODE_CONFIG_DIR = $origOpencodeConfig } else { Remove-Item Env:OPENCODE_CONFIG_DIR -ErrorAction SilentlyContinue }
   return @{ exitCode = $LASTEXITCODE; output = $result }
 }
 
