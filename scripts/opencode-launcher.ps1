@@ -452,7 +452,7 @@ try {
   $env:OPENCODE_CONFIG_CONTENT = $InlineRoutingJson
   Push-Location -LiteralPath $ResolvedTarget
   try {
-    & opencode
+    & opencode.cmd
     $ExitCode = $LASTEXITCODE
   }
   finally {
