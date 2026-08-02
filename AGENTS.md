@@ -22,7 +22,8 @@
 - Do not use background execution or enable `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS` without an explicit user instruction or project-approved rule.
 - Do not assume custom project agents exist.
 - Discover available agents before relying on them.
-- The installed runtime is expected to expose native agents such as `build`, `plan`, `general`, and `explore`, but actual behavior must be verified against the running version.
+- The installed runtime exposes native agents: `orchestrator` (primary), `explorer` (investigation), `dev` (implementation), and `qa` (verification).
+- Agent selection rule: Use `orchestrator` for coordination, `explorer` for read-only analysis, `dev` for code changes, and `qa` for testing. Actual behavior must be verified against the running version.
 
 ## Writes And Concurrency
 
