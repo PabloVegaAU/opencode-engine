@@ -60,6 +60,29 @@
     "max_bytes": 8192
   },
   "snapshot": true,
+  "default_agent": "orchestrator",
+  "agent": {
+    "orchestrator": {
+      "model": "minimax/MiniMax-M2.7",
+      "mode": "primary",
+      "description": "Main orchestrator. Coordinates subagents, manages task decomposition, and synthesizes results."
+    },
+    "explorer": {
+      "model": "minimax/MiniMax-M2.7",
+      "mode": "subagent",
+      "description": "Exploration and research. Analyzes codebases, finds patterns, traces call chains."
+    },
+    "dev": {
+      "model": "minimax/MiniMax-M2.7",
+      "mode": "subagent",
+      "description": "Development. Implements features, fixes bugs, refactors code."
+    },
+    "qa": {
+      "model": "minimax/MiniMax-M2.7",
+      "mode": "subagent",
+      "description": "Quality assurance. Tests implementations, verifies functionality, audits code quality."
+    }
+  },
   "watcher": {
     "ignore": [
       "node_modules/**",
