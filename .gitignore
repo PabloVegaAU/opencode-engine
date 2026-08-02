@@ -29,6 +29,7 @@ tui.json
 sessions/
 logs/
 cache/
+.cache/
 tmp/
 working/
 backups/
@@ -48,6 +49,7 @@ backups/
 # Dependencies and outputs
 node_modules/
 dist/
+build/
 coverage/
 .nyc_output/
 
@@ -95,6 +97,10 @@ test-*.ps1
 # Bootstrap and onboarding state
 **/.bootstrap/active-task.txt
 **/.bootstrap/session-*.json
+
+# Reports (keep .md, ignore .json)
+reports/*.json
+!reports/*.md
 
 # Tool output and dumps
 **/*.dump

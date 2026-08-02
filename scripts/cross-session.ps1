@@ -7,6 +7,9 @@
   The actual CLI is at the configured runtime's bin/orchestration/cross-session-cli.mjs.
   AI_ENV_HOME supplies the default -AiEnvHome value; doctor requires all manifest/spec paths.
 
+  Supports PowerShell style (-Subcommand, -Mission, -ApproveLocalIntegration).
+  For Unix-style (--mission, --approve-local-integration), use cross-session.bat instead.
+
 .PARAMETER Subcommand
   The cross-session subcommand to run
 
@@ -28,6 +31,9 @@
 .PARAMETER OperationId
   Operation ID
 
+.PARAMETER Mission
+  Alias for -OperationId
+
 .PARAMETER At
   UTC timestamp
 
@@ -43,24 +49,27 @@
 .PARAMETER ExpectedTargetCommit
   Expected target commit OID
 
-  .PARAMETER ApproveLocalIntegration
+.PARAMETER ApproveLocalIntegration
   Approve local integration. `-ApproveProtectedRef` is a deprecated alias.
 
 .EXAMPLE
-  .\cross-session.ps1 -Subcommand doctor -AiEnvHome $env:AI_ENV_HOME -ProjectRoot (Get-Location).Path ...
+  & "$env:USERPROFILE\.config\opencode\scripts\cross-session.ps1" -Subcommand mission-status -ProjectRoot 'C:\whatsapp-sales-kit-ai-env' -Mission ses-7004a784
+.EXAMPLE
+  & "$env:USERPROFILE\.config\opencode\scripts\cross-session.ps1" -Subcommand mission-run -ProjectRoot 'C:\whatsapp-sales-kit-ai-env' -Mission ses-7004a784 -ApproveLocalIntegration
 #>
 [CmdletBinding()]
 param(
-  [Parameter(Mandatory = $true)]
+  [Parameter(Mandatory = $false)]
   [ValidateSet("doctor", "mission-create", "mission-status", "task-plan", "task-run",
-               "integration-preflight", "integration-apply", "recovery-plan", "recovery-apply", "mission-run")]
+               "integration-preflight", "integration-apply", "recovery-plan", "recovery-apply",
+               "mission-run", "mission-loop")]
   [string]$Subcommand,
 
   [Parameter(Mandatory = $false)]
   [string]$AiEnvHome = $env:AI_ENV_HOME,
 
   [Parameter(Mandatory = $false)]
-  [string]$ProjectRoot = (Get-Location).Path,
+  [string]$ProjectRoot = $PWD,
 
   [Parameter(Mandatory = $false)]
   [string]$EnvironmentManifest,
@@ -73,6 +82,9 @@ param(
 
   [Parameter(Mandatory = $false)]
   [string]$OperationId,
+
+  [Parameter(Mandatory = $false)]
+  [string]$Mission,
 
   [Parameter(Mandatory = $false)]
   [string]$At,
@@ -90,8 +102,22 @@ param(
   [string]$ExpectedTargetCommit,
 
   [Alias("ApproveProtectedRef")]
-  [switch]$ApproveLocalIntegration
+  [switch]$ApproveLocalIntegration,
+
+  [Parameter(Mandatory = $false)]
+  [int]$MaxIterations = 10,
+
+  [Parameter(Mandatory = $false)]
+  [int]$PollInterval = 5,
+
+  [Parameter(Mandatory = $false)]
+  [int]$Timeout = 300
 )
+
+# Handle -Mission alias for -OperationId
+if ($Mission -and -not $OperationId) {
+  $OperationId = $Mission
+}
 
 $ErrorActionPreference = "Stop"
 
@@ -114,22 +140,30 @@ if ($Subcommand -eq "doctor") {
   if ($missing.Count -gt 0) { throw "doctor requires: $($missing -join ', ')" }
 }
 
-$args = @($Subcommand)
+$nodeArgs = @($Subcommand)
 
-if ($AiEnvHome) { $args += "--ai-env-home"; $args += $AiEnvHome }
-if ($ProjectRoot) { $args += "--project-root"; $args += $ProjectRoot }
-if ($EnvironmentManifest) { $args += "--environment-manifest"; $args += $EnvironmentManifest }
-if ($ProjectManifest) { $args += "--project-manifest"; $args += $ProjectManifest }
-if ($Spec) { $args += "--spec"; $args += $Spec }
-if ($OperationId) { $args += "--operation-id"; $args += $OperationId }
-if ($At) { $args += "--at"; $args += $At }
-if ($TaskKey) { $args += "--task-key"; $args += $TaskKey }
-if ($TargetRepositoryId) { $args += "--target-repository-id"; $args += $TargetRepositoryId }
-if ($TargetRef) { $args += "--target-ref"; $args += $TargetRef }
-if ($ExpectedTargetCommit) { $args += "--expected-target-commit"; $args += $ExpectedTargetCommit }
-if ($ApproveLocalIntegration) { $args += "--approve-local-integration" }
+if ($AiEnvHome) { $nodeArgs += "--ai-env-home"; $nodeArgs += $AiEnvHome }
+if ($ProjectRoot) { $nodeArgs += "--project-root"; $nodeArgs += $ProjectRoot }
+if ($EnvironmentManifest) { $nodeArgs += "--environment-manifest"; $nodeArgs += $EnvironmentManifest }
+if ($ProjectManifest) { $nodeArgs += "--project-manifest"; $nodeArgs += $ProjectManifest }
+if ($Spec) { $nodeArgs += "--spec"; $nodeArgs += $Spec }
+if ($OperationId) { $nodeArgs += "--operation-id"; $nodeArgs += $OperationId }
+if ($Mission -and -not $OperationId) { $nodeArgs += "--mission"; $nodeArgs += $Mission }
+if ($At) { $nodeArgs += "--at"; $nodeArgs += $At }
+if ($TaskKey) { $nodeArgs += "--task-key"; $nodeArgs += $TaskKey }
+if ($TargetRepositoryId) { $nodeArgs += "--target-repository-id"; $nodeArgs += $TargetRepositoryId }
+if ($TargetRef) { $nodeArgs += "--target-ref"; $nodeArgs += $TargetRef }
+if ($ExpectedTargetCommit) { $nodeArgs += "--expected-target-commit"; $nodeArgs += $ExpectedTargetCommit }
+if ($ApproveLocalIntegration) { $nodeArgs += "--approve-local-integration" }
 
-$cliOutput = & node $CliPath @args 2>&1
+# Loop-specific parameters (only passed when using mission-loop)
+if ($Subcommand -eq "mission-loop") {
+  if ($MaxIterations -ne 10) { $nodeArgs += "--max-iterations"; $nodeArgs += $MaxIterations.ToString() }
+  if ($PollInterval -ne 5) { $nodeArgs += "--poll-interval"; $nodeArgs += $PollInterval.ToString() }
+  if ($Timeout -ne 300) { $nodeArgs += "--timeout"; $nodeArgs += $Timeout.ToString() }
+}
+
+$cliOutput = & node $CliPath @nodeArgs 2>&1
 $cliExit = $LASTEXITCODE
 
 # Check if CLI indicates cross-session is not implemented
@@ -146,4 +180,6 @@ if ($cliExit -ne 0) {
   exit $cliExit
 }
 
+# Print CLI output (already captured JSON on success)
+if ($cliOutput) { Write-Host $cliOutput }
 exit 0

@@ -3,7 +3,7 @@
 **Version:** v0.6.0
 **Source:** `C:\OpenCode\opencode-global-src`
 **Runtime:** `C:\Users\VegaValverde\.config\opencode`
-**Last Updated:** 2026-07-27
+**Last Updated:** 2026-07-29
 
 ---
 
@@ -79,7 +79,7 @@ C:\Users\VegaValverde\.config\opencode\
 | `retrieval/` directory | Removed | Duplicate of `bin/retrieval/` |
 | `routing/` directory | Official | Required by launcher (model-matrix.json) |
 | `bin/environment/` | Removed | Not in official distribution |
-| `bin/orchestration/` | Removed | Not in official distribution (cross-session CLI) |
+| `bin/orchestration/` | Official | Cross-session CLI |
 | `.bak` backup files | Cleaned | 52+ files removed from active directories |
 | Legacy backups | Preserved | Located in `backups/`, `opencode.backups/`, `runtime/` |
 
@@ -222,16 +222,18 @@ Unknown Agent → Root Model from Profile Overlay
 
 ## Orchestration & Cross-Session
 
-**Note:** The `bin/orchestration/` directory was NOT part of the official distribution. Cross-session functionality is provided via `scripts/cross-session.ps1` which requires the CLI to be installed separately via npm.
+The cross-session CLI is implemented at `bin/orchestration/cross-session-cli.mjs` and exposed through `scripts/cross-session.ps1` and `scripts/cross-session.bat`. All ten subcommands are local-only: the CLI does not push, fetch, merge, or otherwise modify remotes.
 
-### CLI Wrapper
-| File | Purpose |
-|------|---------|
-| `scripts/cross-session.ps1` | PowerShell wrapper (requires npm-installed CLI) |
+### Entry Points
+| File | Syntax | Purpose |
+|------|--------|---------|
+| `bin/orchestration/cross-session-cli.mjs` | Direct Node | Scripting, CI/CD |
+| `scripts/cross-session.ps1` | PowerShell `-Flag value` | Native PowerShell |
+| `scripts/cross-session.bat` | Unix `--flag value` | Translates to PowerShell flags |
 
 ### Subcommands
 ```
-doctor, mission-create, mission-activate, mission-status,
+doctor, mission-create, mission-status,
 task-plan, task-run, integration-preflight, integration-apply,
 recovery-plan, recovery-apply, mission-run
 ```
@@ -239,17 +241,15 @@ recovery-plan, recovery-apply, mission-run
 ### Agent Discovery
 1. `opencode.json` - JSON config
 2. `opencode.jsonc` - JSONC config
-3. `.Opencode/agents/*.md` - Markdown with YAML frontmatter
+3. `.opencode/agents/*.md` - Markdown with YAML frontmatter
 
 ### Removed Modules (Not in Official Distribution)
 
 | Module | Reason Removed |
 |--------|---------------|
-| `bin/orchestration/*` | Not in official distribution manifest |
 | `bin/environment/*` | Not in official distribution manifest |
-| `cross-session-cli.mjs` | Installed via npm instead |
 
-**Note:** If cross-session functionality is required, install via: `npm install -g opencode-ai`
+`integration-apply` records local integration metadata only and requires `--approve-local-integration`; it does not modify a target repository.
 
 ---
 
@@ -268,6 +268,7 @@ recovery-plan, recovery-apply, mission-run
 | `retrieval-router.ps1` | Retrieval wrapper |
 | `setup-retrieval-tools.ps1` | Cross-platform ripgrep installer |
 | `cross-session.ps1` | Cross-session orchestration wrapper |
+| `cross-session.bat` | Cross-session Unix-style launcher |
 
 ---
 
@@ -575,7 +576,7 @@ The `skill-creator` skill already implements a working multi-agent pattern:
 | `opencode.profiles/` | Yes | Official - profile overlays + model-matrix |
 | `releases/` | Yes | Official - release records |
 | `runtime/` | Backup | Contains legacy backups |
-| `scripts/` | Yes | Official - 14 lifecycle scripts |
+| `scripts/` | Yes | Official - 16 lifecycle scripts (14 + cross-session.bat + opencode-launcher.ps1) |
 | `templates/` | Yes | Official - project templates |
 | `backups/` | Backup | Legacy backup storage |
 | `fixtures/` | Test | Test fixtures |
@@ -589,7 +590,7 @@ The `skill-creator` skill already implements a working multi-agent pattern:
 | `routing/` | Removed | Duplicate of `opencode.profiles/` model-matrix |
 | `retrieval/` | Removed | Duplicate of `bin/retrieval/` |
 | `bin/environment/` | Removed | Not in official distribution |
-| `bin/orchestration/` | Removed | Not in official distribution (cross-session CLI) |
+| `bin/orchestration/` | Yes | Official cross-session CLI |
 
 ### Cleanup Completed
 
@@ -597,10 +598,9 @@ The `skill-creator` skill already implements a working multi-agent pattern:
 |--------|-------|
 | `retrieval/` directory removed | 1 |
 | `bin/environment/` removed | 1 |
-| `bin/orchestration/` removed | 1 |
 | `.bak` files removed | 52+ |
 | `routing/` directory | Restored | Required by launcher scripts |
-| cross-session CLI | Removed | Not in official distribution |
+| cross-session CLI | Implemented | Ten local-only subcommands; no remote operations |
 
 ### Source vs Runtime Parity
 
@@ -610,7 +610,7 @@ The `skill-creator` skill already implements a working multi-agent pattern:
 | bin/retrieval/ | 17 files | 17 files | ✓ Match |
 | bin/updates/ | 8 files | 8 files | ✓ Match |
 | contracts/ | 27 schemas | 27 schemas | ✓ Match |
-| scripts/ | 16 files | 16 files | ✓ Match |
+| scripts/ | 17 files | 17 files | ✓ Match |
 | routing/ | 2 files | 2 files | ✓ Match |
 
 ---
@@ -675,7 +675,10 @@ pwsh scripts/init-opencode-project.ps1 -ProjectPath <path>
 # Update runtime
 pwsh scripts/update-opencode-global.ps1
 
-# Cross-session doctor
+# Cross-session (Unix-style via .bat)
+scripts\cross-session.bat --subcommand doctor --ai-env-home <path> --project-root <path> --environment-manifest <path> --project-manifest <path> --spec <path>
+
+# Cross-session (PowerShell-style)
 pwsh scripts/cross-session.ps1 -Subcommand doctor -AiEnvHome <path> -ProjectRoot <path> -EnvironmentManifest <path> -ProjectManifest <path> -Spec <path>
 ```
 

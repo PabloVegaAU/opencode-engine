@@ -52,11 +52,11 @@
 ## Public Cross-Session Commands
 
 - OpenCode is the only compatible executor for `Mission Spec v1` records.
-- The PowerShell wrapper is `scripts/cross-session.ps1`; the global command definition is `commands/cross-session.md`.
-- The actual CLI (`cross-session-cli.mjs`) is part of the OpenCode runtime and must be installed separately via `npm install -g opencode-ai`.
-- Supported subcommands: `doctor`, `mission-create`, `mission-status`, `task-plan`, `task-run`, `integration-preflight`, `integration-apply`, `recovery-plan`, `recovery-apply`, `mission-run`.
+- The CLI is distributed via opencode-global at `bin/orchestration/cross-session-cli.mjs`, synced to runtime and AI environments.
+- Two entry points: `scripts/cross-session.ps1` (PowerShell) and `scripts/cross-session.bat` (Unix-style `--flag value`).
+- Supported subcommands: `doctor`, `mission-create`, `mission-status`, `task-plan`, `task-run`, `integration-preflight`, `integration-apply`, `recovery-plan`, `recovery-apply`, `mission-run`, `mission-loop`.
 - Model, agent, and variant arrive through runtime arguments only. The Project Manifest and Mission Spec never store them.
-- The CLI never pushes, fetches, merges to `main`, or touches remotes. `integration-apply` requires `--approve-protected-ref` to apply changes to protected branches.
+- The CLI never pushes, fetches, merges to `main`, or touches remotes. `integration-apply` requires `--approve-local-integration`.
 - `mission-run` stops at conflict, failed, interrupted, blocked, or recovery_required and runs at most one writer Task at a time.
 
 ## v0.6.0 Capabilities

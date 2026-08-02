@@ -1,5 +1,25 @@
 # Changelog
 
+## [Unreleased]
+
+### Cross-Session CLI Fixes
+
+- **Fix `isValidOpId` regex:** Changed `{1,62}` → `{0,62}` so 1-char IDs like `a` pass validation
+- **Add `--mission` alias:** CLI `parseArgs` now maps `--mission` → `--operation-id`
+- **Add `-Mission` parameter:** Wrapper accepts `-Mission` as alias for `-OperationId`
+- **Fix silent output:** Wrapper now prints JSON response on success (was previously swallowed)
+- **Add `cross-session.bat`:** Batch launcher that translates Unix-style `--flag value` to PowerShell `-Flag value`, enabling familiar CLI syntax
+- **Add `mission-loop` subcommand:** Runs `mission-run` repeatedly until all tasks complete or limits reached. Supports `--max-iterations`, `--poll-interval`, `--timeout`
+- **Tests:** All 6 unit tests pass (`node --test tests/cross-session-cli.test.mjs`)
+
+### Documentation Updates
+
+- **Updated:** `commands/cross-session.md` — added three entry points, usage examples, file locations
+- **Updated:** `AGENTS.md` — Public Cross-Session Commands section reflects new distribution model
+- **Updated:** `docs/ORCHESTRATION.md` — entry points table, file locations, updated paths
+- **Updated:** `docs/TECHNOLOGY_INVENTORY.md` — scripts count 16→17, cross-session.bat documented, entry points clarified
+- **Updated:** `PROGRESS.md` — post-v0.6.0 bug fixes section added
+
 ## [0.6.0] - 2026-07-27
 
 ### Ownership Engine Phase 1 (COMPLETED)

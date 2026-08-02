@@ -59,7 +59,7 @@
     },
 
     "bin_orchestration": {
-      "description": "Cross-session orchestration CLI (stub implementation)",
+      "description": "Cross-session orchestration CLI (local-only, 10 subcommands)",
       "source_prefix": "bin/orchestration/",
       "runtime_prefix": "bin/orchestration/",
       "entries": [
@@ -109,6 +109,7 @@
         { "source": "scripts/certify-opencode-global.ps1", "runtime": "scripts/certify-opencode-global.ps1" },
         { "source": "scripts/opencode-launcher.ps1", "runtime": "scripts/opencode-launcher.ps1" },
         { "source": "scripts/cross-session.ps1", "runtime": "scripts/cross-session.ps1" },
+        { "source": "scripts/cross-session.bat", "runtime": "scripts/cross-session.bat" },
         { "source": "scripts/retrieval-router.ps1", "runtime": "scripts/retrieval-router.ps1" },
         { "source": "scripts/setup-retrieval-tools.ps1", "runtime": "scripts/setup-retrieval-tools.ps1" },
         { "source": "scripts/ownership-update.ps1", "runtime": "scripts/ownership-update.ps1" }
@@ -160,6 +161,7 @@
     "Development-only scripts (generate-retrieval-validators.mjs, validate.mjs, discover-real-query-set.mjs, run-retrieval-real-pilot.mjs) are NOT installed to runtime.",
     "cleanup-runtime.ps1 is temporary migration tooling and may be removed in future versions.",
     "setup-retrieval-tools.ps1 remains as optional runtime utility.",
-    "Distribution files are installed to runtime/distribution/ for self-discovery by install/update scripts."
+    "Distribution files are installed to runtime/distribution/ for self-discovery by install/update scripts.",
+    "cross-session.bat (Unix-style launcher) requires Windows cmd.exe environment; not available on Unix."
   ]
 }

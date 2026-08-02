@@ -1,6 +1,6 @@
 # OpenCode Global - Build Progress
 
-## Status: V0.5.1_CLOSED_CERTIFIED_DISTRIBUTED_V0.6.0_NOT_STARTED
+## Status: V0.6.0_CURRENT_RELEASE
 
 ## Current Location
 
@@ -355,7 +355,7 @@ C:\OpenCode\opencode-global-src\
 ├── package.json
 ├── pnpm-lock.yaml
 ├── .gitignore
-├── VERSION (0.4.0)
+├── VERSION (0.6.0)
 ├── LICENSE
 ├── CHANGELOG.md (0.4.0)
 ├── PROGRESS.md
@@ -540,7 +540,7 @@ C:\OpenCode\opencode-global-src\
 
 ## Version
 
-- OpenCode Global: **0.5.1** (released)
+- OpenCode Global: **0.6.0** (current release; matches `VERSION` and `package.json`)
 - Compatible with OpenCode: **1.18.x+**
 
 ## Final Release Verification (Phase 8)
@@ -574,18 +574,33 @@ v0.5.1 represents a stable closure of the v0.5.x retrieval execution lifecycle. 
 
 State: `V0.5.1_CLOSED_CERTIFIED_DISTRIBUTED`. All deliverables complete, certified, and distributed.
 
-## v0.6.0 Planning (NOT STARTED)
+## v0.6.0 Current Release
 
-v0.6.0 tasks are defined in `specs/` and are currently **NOT STARTED**:
+v0.6.0 is the current release, as declared by `VERSION` and `package.json`.
 
-| Task | Description | Status |
-|------|-------------|--------|
-| T-001 | Project spec placeholder | NOT STARTED |
-| T-002 | Project spec placeholder | NOT STARTED |
-| ... | ... | ... |
-| T-028 | Project spec placeholder | NOT STARTED |
+### Cross-Session CLI Bug Fixes (Post-v0.6.0)
 
-All T-001 through T-028 tasks in `specs/` remain in NOT STARTED state pending v0.6.0 planning initiation.
+The following bugs in `cross-session-cli.mjs` and `cross-session.ps1` were fixed
+and synced to runtime (`~/.config/opencode`) and all AI environments:
+
+| Fix | File | Description |
+|-----|------|-------------|
+| `isValidOpId` regex | `bin/orchestration/cross-session-cli.mjs` | Changed `{1,62}` → `{0,62}` so 1-char IDs like `a` pass validation |
+| `--mission` alias | `bin/orchestration/cross-session-cli.mjs` | Added `parseArgs` mapping: `--mission` → `--operation-id` |
+| `-Mission` param | `scripts/cross-session.ps1` | Added `$Mission` parameter that resolves to `--operation-id` |
+| Silent output on success | `scripts/cross-session.ps1` | Added `if ($cliOutput) { Write-Host $cliOutput }` so JSON is printed |
+| Output translation | `scripts/cross-session.bat` | **NEW** — batch launcher that translates Unix-style `--flag value` to PowerShell `-Flag value` |
+
+Verified working:
+
+- All 6 unit tests pass: `node --test tests/cross-session-cli.test.mjs`
+- CLI direct: `node cross-session-cli.mjs recovery-plan --project-root ... --operation-id ses-7004a784` → ✅
+- `.bat` Unix-style: `cross-session.bat --subcommand mission-run --mission ses-7004a784 --approve-local-integration` → ✅
+- `.bat` Unix-style: `cross-session.bat --subcommand mission-status --operation-id ses-7004a784` → ✅
+- `.ps1` PowerShell-style: `-Subcommand mission-status -Mission ses-7004a784` → ✅
+- `.ps1` PowerShell-style: `-Subcommand mission-run -Mission ses-7004a784 -ApproveLocalIntegration` → ✅
+- Single-char operation-id `a` passes validation → ✅ (was previously rejected)
+- `--approve-local-integration` flag works via `.bat` translator → ✅
 
 ## Security
 
